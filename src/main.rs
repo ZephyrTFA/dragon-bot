@@ -1,23 +1,57 @@
-use std::env;
+use std::{
+    env,
+    fs::{create_dir_all, exists},
+    process::exit,
+};
 
 use log::{error, info, warn};
 use module::event_handler::ModuleEventHandler;
 use serenity::{Client, all::GatewayIntents};
-use tokio::main;
+use tokio::{main, sync::OnceCell};
 
 pub mod module;
+
+pub fn data_path() -> &'static String {
+    if !DATA_PATH.initialized() {
+        DATA_PATH
+            .set(if let Ok(data_path) = env::var("DATA_PATH") {
+                data_path
+            } else {
+                warn!("DATA_PATH not set, defaulting to local data directory.");
+
+                dirs::data_dir()
+                    .or_else(|| {
+                        error!("failed to locate data directory");
+                        exit(1);
+                    })
+                    .unwrap()
+                    .join("dragon-bot")
+                    .display()
+                    .to_string()
+            })
+            .unwrap_or_else(|e| {
+                error!("failed to set data path static cell: {e}");
+                exit(1);
+            });
+        info!("Data Directory: {:?}", DATA_PATH.get().unwrap());
+
+        let data_path = DATA_PATH.get().unwrap();
+        if exists(data_path).is_err() {
+            if let Err(error) = create_dir_all(data_path) {
+                error!("failed to create data directory: {error}");
+                exit(1);
+            }
+        }
+    }
+
+    DATA_PATH.get().unwrap()
+}
+static DATA_PATH: OnceCell<String> = OnceCell::const_new();
 
 #[main]
 async fn main() {
     env_logger::init();
-
-    let data_path = env::var("DATA_PATH");
-    let data_path = if data_path.is_err() {
-        warn!("DATA_PATH is not set, defaulting to ``");
-        "".to_string()
-    } else {
-        data_path.unwrap()
-    };
+    data_path();
 
     let token = env::var("DISCORD_TOKEN");
     if token.is_err() {
