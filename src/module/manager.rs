@@ -34,6 +34,15 @@ pub async fn module_manager<'a>() -> MutexGuard<'a, ModuleManager> {
 }
 
 impl<'a> ModuleManager {
+    pub fn get_module_by_id(
+        &'a self,
+        id: &str,
+    ) -> Result<&'a DragonBotModuleInstance, ModuleManagerError> {
+        self.modules
+            .get(id)
+            .ok_or(ModuleManagerError::ModuleNotLoaded)
+    }
+
     pub fn get_module<M>(&'a self) -> Result<&'a M, ModuleError>
     where
         M: DragonBotModule,
