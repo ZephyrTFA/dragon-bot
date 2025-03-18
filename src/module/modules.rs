@@ -1,6 +1,6 @@
 use super::{
-    DragonBotModule, config::ConfigManager, permissions::PermissionsManager, tg_verify::TgVerify,
-    tgdb::TgDb,
+    DragonBotModule, config::ConfigManager, errors::ErrorManager, permissions::PermissionsManager,
+    tg_verify::TgVerify, tgdb::TgDb,
 };
 
 pub enum DragonBotModuleInstance {
@@ -8,6 +8,7 @@ pub enum DragonBotModuleInstance {
     TgVerify(TgVerify),
     ConfigManager(ConfigManager),
     PermissionsManager(PermissionsManager),
+    ErrorManager(ErrorManager),
 }
 
 macro_rules! impl_from {
@@ -44,3 +45,4 @@ impl_from!(TgDb);
 impl_from!(TgVerify);
 impl_from!(ConfigManager);
 impl_from!(PermissionsManager);
+impl_from!(ErrorManager);

@@ -15,5 +15,12 @@ where
     where
         Self: Sized;
 
+    fn id(&self) -> &'static str
+    where
+        Self: Sized,
+    {
+        Self::module_id()
+    }
+
     fn init(&mut self) {}
 }

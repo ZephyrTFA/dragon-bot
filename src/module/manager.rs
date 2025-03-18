@@ -37,10 +37,11 @@ impl<'a> ModuleManager {
     pub fn get_module_by_id(
         &'a self,
         id: &str,
-    ) -> Result<&'a DragonBotModuleInstance, ModuleManagerError> {
-        self.modules
+    ) -> Result<&'a DragonBotModuleInstance, ModuleError> {
+        Ok(self
+            .modules
             .get(id)
-            .ok_or(ModuleManagerError::ModuleNotLoaded)
+            .ok_or(ModuleManagerError::ModuleNotLoaded)?)
     }
 
     pub fn get_module<M>(&'a self) -> Result<&'a M, ModuleError>
