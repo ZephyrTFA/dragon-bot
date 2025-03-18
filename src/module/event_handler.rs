@@ -1,13 +1,24 @@
-use super::{DragonBotModule, manager::module_manager, modules::DragonBotModuleInstance};
+use super::{manager::module_manager, modules::DragonBotModuleInstance};
 use serenity::{
-    all::{Context, EventHandler, Interaction},
+    all::{Context, EventHandler, Guild, Interaction},
     async_trait,
 };
 
-pub struct ModuleEventHandler {}
+pub struct ModuleEventHandler;
+
+impl ModuleEventHandler {
+    async fn create_command(&self, _guild: Guild, _module: DragonBotModuleInstance) {
+        // let builder = module.command_builder();
+    }
+}
 
 #[async_trait]
 impl EventHandler for ModuleEventHandler {
+    async fn ready(&self, _ctx: Context, _ready: serenity::model::gateway::Ready) {
+        let _module_manager = module_manager().await;
+        todo!()
+    }
+
     async fn interaction_create(&self, ctx: Context, interaction: Interaction) {
         let module_manager = module_manager().await;
 
@@ -18,23 +29,7 @@ impl EventHandler for ModuleEventHandler {
             }
 
             let module = module.unwrap();
-            match module {
-                DragonBotModuleInstance::ConfigManager(config_manager) => {
-                    config_manager.command_handle(ctx, interaction).await;
-                }
-                DragonBotModuleInstance::ErrorManager(error_manager) => {
-                    error_manager.command_handle(ctx, interaction).await;
-                }
-                DragonBotModuleInstance::PermissionsManager(permissions_manager) => {
-                    permissions_manager.command_handle(ctx, interaction).await;
-                }
-                DragonBotModuleInstance::TgVerify(tg_verify) => {
-                    tg_verify.command_handle(ctx, interaction).await;
-                }
-                DragonBotModuleInstance::TgDb(tg_db) => {
-                    tg_db.command_handle(ctx, interaction).await;
-                }
-            }
+            module.command_handle(ctx, interaction).await;
         }
     }
 }

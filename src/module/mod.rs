@@ -30,19 +30,11 @@ where
         None
     }
 
-    fn command_handle(
-        &self,
-        _ctx: Context,
-        _interaction: Interaction,
-    ) -> impl Future<Output = impl Send> {
+    fn command_handle(&self, _ctx: Context, _interaction: Interaction) -> impl Future<Output = ()> {
         async {}
     }
 
-    fn command_help(
-        &self,
-        _ctx: Context,
-        _interaction: Interaction,
-    ) -> impl Future<Output = impl Send> {
+    fn command_help(&self, _ctx: Context, _interaction: Interaction) -> impl Future<Output = ()> {
         async { todo!("default help handler") }
     }
 }
