@@ -30,8 +30,8 @@ impl TgVerify {
         guild: GuildId,
         ckey: &str,
     ) -> Result<Vec<ByondDiscordLink>, ModuleError> {
-        let config = self.get_config(guild)?;
-        let discord_link_table = &config.get().discord_links_table;
+        let config = self.get_config(guild).await?;
+        let discord_link_table = &config.discord_links_table;
 
         let module_manager = module_manager().await;
         let tgdb = module_manager.get_module::<TgDb>()?;
@@ -53,8 +53,8 @@ impl TgVerify {
         guild: GuildId,
         discord_id: u64,
     ) -> Result<Vec<ByondDiscordLink>, ModuleError> {
-        let config = self.get_config(guild)?;
-        let discord_link_table = &config.get().discord_links_table;
+        let config = self.get_config(guild).await?;
+        let discord_link_table = &config.discord_links_table;
 
         let module_manager = module_manager().await;
         let tgdb = module_manager.get_module::<TgDb>()?;
@@ -76,8 +76,8 @@ impl TgVerify {
         guild: GuildId,
         token: &str,
     ) -> Result<Option<ByondDiscordLink>, ModuleError> {
-        let config = self.get_config(guild)?;
-        let discord_link_table = &config.get().discord_links_table;
+        let config = self.get_config(guild).await?;
+        let discord_link_table = &config.discord_links_table;
 
         let module_manager = module_manager().await;
         let tgdb = module_manager.get_module::<TgDb>()?;
@@ -99,8 +99,8 @@ impl TgVerify {
         guild: GuildId,
         link: &ByondDiscordLink,
     ) -> Result<(), ModuleError> {
-        let config = self.get_config(guild)?;
-        let discord_link_table = &config.get().discord_links_table;
+        let config = self.get_config(guild).await?;
+        let discord_link_table = &config.discord_links_table;
 
         let module_manager = module_manager().await;
         let tgdb = module_manager.get_module::<TgDb>()?;

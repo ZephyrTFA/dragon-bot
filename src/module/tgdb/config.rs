@@ -4,7 +4,7 @@ use crate::module::config::Configurable;
 
 use super::TgDb;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub(super) struct TgDbConfig {
     pub address: String,
     pub port: u64,
@@ -13,4 +13,4 @@ pub(super) struct TgDbConfig {
     pub database: String,
 }
 
-impl Configurable<'_, TgDbConfig> for TgDb {}
+impl Configurable<TgDbConfig> for TgDb {}

@@ -7,10 +7,10 @@ use crate::module::config::Configurable;
 
 use super::PermissionsManager;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub(super) struct PermissionsManagerConfig {
     pub user: HashMap<UserId, Vec<String>>,
     pub role: HashMap<RoleId, Vec<String>>,
 }
 
-impl Configurable<'_, PermissionsManagerConfig> for PermissionsManager {}
+impl Configurable<PermissionsManagerConfig> for PermissionsManager {}

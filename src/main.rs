@@ -1,6 +1,7 @@
 use std::{
     env,
     fs::{create_dir_all, exists},
+    path::PathBuf,
     process::exit,
 };
 
@@ -11,7 +12,7 @@ use tokio::{main, sync::OnceCell};
 
 pub mod module;
 
-pub fn data_path() -> &'static String {
+pub fn data_path() -> PathBuf {
     if !DATA_PATH.initialized() {
         DATA_PATH
             .set(if let Ok(data_path) = env::var("DATA_PATH") {
@@ -44,7 +45,7 @@ pub fn data_path() -> &'static String {
         }
     }
 
-    DATA_PATH.get().unwrap()
+    DATA_PATH.get().unwrap().into()
 }
 static DATA_PATH: OnceCell<String> = OnceCell::const_new();
 

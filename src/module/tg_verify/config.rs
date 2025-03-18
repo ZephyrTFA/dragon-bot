@@ -5,7 +5,7 @@ use crate::module::config::Configurable;
 
 use super::TgVerify;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub(super) struct TgVerifyConfig {
     pub role_verified_linked: RoleId,
     pub role_verified_living: RoleId,
@@ -13,4 +13,4 @@ pub(super) struct TgVerifyConfig {
     pub discord_links_table: String,
 }
 
-impl Configurable<'_, TgVerifyConfig> for TgVerify {}
+impl Configurable<TgVerifyConfig> for TgVerify {}

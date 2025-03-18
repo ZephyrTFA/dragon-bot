@@ -1,74 +1,55 @@
-use log::error;
-use std::marker::PhantomData;
+use std::io;
+use tokio::fs::read_to_string;
 
 use serde::{Deserialize, Serialize};
-use serenity::all::GuildId;
+use serenity::{all::GuildId, async_trait};
+
+use crate::data_path;
 
 use super::{DragonBotModule, errors::ModuleError};
 
 #[derive(Debug)]
 pub enum ConfigError {
     SerdeError(serde_json::Error),
+    IoError(io::Error),
 }
 
-pub trait Configurable<'d, C>
+#[async_trait]
+pub trait Configurable<C>
 where
     Self: DragonBotModule + Send,
-    C: Serialize + Deserialize<'d>,
+    C: Serialize + for<'de> Deserialize<'de> + Default + Send + 'static,
 {
-    fn get_config(&'d self, guild: GuildId) -> Result<ConfigHolder<'d, C, Self>, ModuleError> {
-        Ok(ConfigHolder {
-            config: serde_json::from_str("{}")
-                .map_err(|e| ModuleError::ConfigError(ConfigError::SerdeError(e)))?,
-            guild,
-            owner: self,
-            phantom: PhantomData {},
-        })
+    async fn get_config(&self, guild: GuildId) -> Result<C, ModuleError> {
+        let config_path = data_path()
+            .join("config")
+            .join(guild.to_string())
+            .join(format!("{}.json", Self::module_id()));
+        if !config_path.exists() {
+            return Ok(C::default());
+        }
+
+        let json = read_to_string(config_path)
+            .await
+            .map_err(ConfigError::IoError)?;
+        Ok(serde_json::from_str(&json).map_err(ConfigError::SerdeError)?)
     }
 
-    fn set_config(&self, _guild: GuildId) -> Result<(), ModuleError> {
-        todo!()
-    }
-}
+    async fn set_config(&self, guild: GuildId, config: C) -> Result<(), ModuleError> {
+        let config_path = data_path()
+            .join("config")
+            .join(guild.to_string())
+            .join(format!("{}.json", Self::module_id()));
 
-pub struct ConfigHolder<'d, C, M>
-where
-    C: Serialize + Deserialize<'d>,
-    M: Configurable<'d, C>,
-{
-    config: C,
-    guild: GuildId,
-    owner: &'d M,
-    phantom: PhantomData<&'d C>,
-}
+        let json = serde_json::to_string(&config)
+            .map_err(ConfigError::SerdeError)?
+            .to_string();
 
-impl<'d, C, M> ConfigHolder<'d, C, M>
-where
-    C: Serialize + Deserialize<'d>,
-    M: Configurable<'d, C>,
-{
-    pub fn get(&self) -> &C {
-        &self.config
-    }
+        tokio::fs::write(config_path, json)
+            .await
+            .map_err(ConfigError::IoError)?;
 
-    pub fn get_mut(&mut self) -> &mut C {
-        &mut self.config
-    }
-
-    pub fn guild(&self) -> GuildId {
-        self.guild
-    }
-}
-
-impl<'d, C, M> Drop for ConfigHolder<'d, C, M>
-where
-    C: Serialize + Deserialize<'d>,
-    M: Configurable<'d, C>,
-{
-    fn drop(&mut self) {
-        if let Err(error) = self.owner.set_config(self.guild) {
-            error!("failed to save config: {error:?}");
-        };
+        Ok(())
     }
 }
 
