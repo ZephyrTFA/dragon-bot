@@ -1,9 +1,14 @@
-use super::{manager::ModuleManagerError, permissions::PermissionsError, tgdb::TgDbError};
+use super::{
+    config::ConfigError, manager::ModuleManagerError, permissions::PermissionsError,
+    tgdb::TgDbError,
+};
 
+#[derive(Debug)]
 pub enum ModuleError {
     TgDbError(TgDbError),
     ModuleManagerError(ModuleManagerError),
     PermissionsError(PermissionsError),
+    ConfigError(ConfigError),
 }
 
 macro_rules! impl_from {
@@ -19,3 +24,4 @@ macro_rules! impl_from {
 impl_from!(TgDbError);
 impl_from!(ModuleManagerError);
 impl_from!(PermissionsError);
+impl_from!(ConfigError);

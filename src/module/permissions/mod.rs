@@ -16,6 +16,7 @@ impl DragonBotModule for PermissionsManager {
     }
 }
 
+#[derive(Debug)]
 pub enum PermissionsError {
     PermissionNotFound,
     PermissionAlreadyGiven,

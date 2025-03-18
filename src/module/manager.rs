@@ -4,6 +4,7 @@ use tokio::sync::{Mutex, MutexGuard, OnceCell};
 
 use super::{DragonBotModule, errors::ModuleError, modules::DragonBotModuleInstance};
 
+#[derive(Debug)]
 pub enum ModuleManagerError {
     ModuleNotLoaded,
 }

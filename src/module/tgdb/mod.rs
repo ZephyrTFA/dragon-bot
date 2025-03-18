@@ -34,6 +34,7 @@ impl DragonBotModule for TgDb {
     }
 }
 
+#[derive(Debug)]
 pub enum TgDbError {
     MysqlError(mysql::Error),
     InternalError(String),
