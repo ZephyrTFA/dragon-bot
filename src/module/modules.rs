@@ -24,14 +24,12 @@ macro_rules! impl_from {
                 }
             }
         }
-    };
 
-    ($type: ident) => {
         impl<'a> From<&'a mut DragonBotModuleInstance> for &'a mut $type
         where
             $type: DragonBotModule,
         {
-            fn from(value: &'a DragonBotModuleInstance) -> Self {
+            fn from(value: &'a mut DragonBotModuleInstance) -> Self {
                 match value {
                     DragonBotModuleInstance::$type(v) => v,
                     _ => panic!("grabbed wrong instance type"),

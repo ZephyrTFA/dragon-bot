@@ -45,7 +45,7 @@ impl DragonBotModule for ErrorManager {
 }
 
 impl ErrorManager {
-    pub fn module_error(&mut self, module: &impl DragonBotModule, error: ModuleError) {
+    pub fn module_error(&mut self, module: &impl DragonBotModule, error: &ModuleError) {
         let error_string = match &error {
             ModuleError::TgDbError(e) => {
                 format!("[{}] TgDbError: {:?}", module.id(), e)
