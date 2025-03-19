@@ -1,3 +1,4 @@
+use errors::ModuleError;
 use serenity::all::{Context, CreateCommand, Interaction};
 
 pub mod config;
@@ -24,9 +25,11 @@ where
         Self::module_id()
     }
 
-    fn init(&mut self) {}
+    fn init(&mut self, _ctx: &Context) -> impl Future<Output = Result<(), ModuleError>> {
+        async { Ok(()) }
+    }
 
-    fn command_builder() -> Option<CreateCommand> {
+    fn command_builder(&self) -> Option<CreateCommand> {
         None
     }
 

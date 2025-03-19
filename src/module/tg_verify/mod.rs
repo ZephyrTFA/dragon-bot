@@ -34,7 +34,7 @@ impl TgVerify {
         let discord_link_table = &config.discord_links_table;
 
         let module_manager = module_manager().await;
-        let tgdb = module_manager.get_module::<TgDb>()?;
+        let tgdb = module_manager.get_module::<TgDb>(guild)?;
 
         Ok(tgdb
             .get_conn(guild)?
@@ -57,7 +57,7 @@ impl TgVerify {
         let discord_link_table = &config.discord_links_table;
 
         let module_manager = module_manager().await;
-        let tgdb = module_manager.get_module::<TgDb>()?;
+        let tgdb = module_manager.get_module::<TgDb>(guild)?;
 
         Ok(tgdb
             .get_conn(guild)?
@@ -80,7 +80,7 @@ impl TgVerify {
         let discord_link_table = &config.discord_links_table;
 
         let module_manager = module_manager().await;
-        let tgdb = module_manager.get_module::<TgDb>()?;
+        let tgdb = module_manager.get_module::<TgDb>(guild)?;
 
         Ok(tgdb
             .get_conn(guild)?
@@ -103,7 +103,7 @@ impl TgVerify {
         let discord_link_table = &config.discord_links_table;
 
         let module_manager = module_manager().await;
-        let tgdb = module_manager.get_module::<TgDb>()?;
+        let tgdb = module_manager.get_module::<TgDb>(guild)?;
 
         let id = &link.id;
         let result: Option<ByondDiscordLink> = tgdb

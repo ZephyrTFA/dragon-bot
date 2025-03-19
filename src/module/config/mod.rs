@@ -4,7 +4,7 @@ use tokio::fs::read_to_string;
 use serde::{Deserialize, Serialize};
 use serenity::{all::GuildId, async_trait};
 
-use crate::data_path;
+use crate::config_path;
 
 use super::{DragonBotModule, errors::ModuleError};
 
@@ -21,9 +21,9 @@ where
     C: Serialize + for<'de> Deserialize<'de> + Default + Send + 'static,
 {
     async fn get_config(&self, guild: GuildId) -> Result<C, ModuleError> {
-        let config_path = data_path()
-            .join("config")
-            .join(guild.to_string())
+        let config_path = config_path(&guild)
+            .await
+            .map_err(ConfigError::IoError)?
             .join(format!("{}.json", Self::module_id()));
         if !config_path.exists() {
             return Ok(C::default());
@@ -36,11 +36,10 @@ where
     }
 
     async fn set_config(&self, guild: GuildId, config: C) -> Result<(), ModuleError> {
-        let config_path = data_path()
-            .join("config")
-            .join(guild.to_string())
+        let config_path = config_path(&guild)
+            .await
+            .map_err(ConfigError::IoError)?
             .join(format!("{}.json", Self::module_id()));
-
         let json = serde_json::to_string(&config)
             .map_err(ConfigError::SerdeError)?
             .to_string();

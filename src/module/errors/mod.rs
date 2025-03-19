@@ -1,33 +1,47 @@
 use std::collections::HashMap;
 
 use super::{
-    DragonBotModule, config::ConfigError, manager::ModuleManagerError,
+    DragonBotModule, config::ConfigError, event_handler::CommandError, manager::ModuleManagerError,
     permissions::PermissionsError, tgdb::TgDbError,
 };
 use log::error;
 
-#[derive(Debug)]
-pub enum ModuleError {
-    TgDbError(TgDbError),
-    ModuleManagerError(ModuleManagerError),
-    PermissionsError(PermissionsError),
-    ConfigError(ConfigError),
-}
+macro_rules! module_error_types {
+    ( $( $type: ident ),+ ) => {
+        #[derive(Debug)]
+        pub enum ModuleError {
+            $(
+                $type($type),
+            )+
+        }
 
-macro_rules! impl_from {
-    ($type: ident) => {
-        impl From<$type> for ModuleError {
-            fn from(value: $type) -> Self {
-                Self::$type(value)
+        $(
+            impl From<$type> for ModuleError {
+                fn from(value: $type) -> Self {
+                    Self::$type(value)
+                }
+            }
+        )+
+
+        impl ErrorManager {
+            fn get_module_error_string(module: &impl DragonBotModule, error: &ModuleError) -> String {
+                match error {
+                    $(
+                        ModuleError::$type(err) => format!("[{}][{}]: {:?}", module.id(), stringify!($type), err),
+                    )+
+                }
             }
         }
     };
 }
 
-impl_from!(TgDbError);
-impl_from!(ModuleManagerError);
-impl_from!(PermissionsError);
-impl_from!(ConfigError);
+module_error_types! {
+    TgDbError,
+    ModuleManagerError,
+    PermissionsError,
+    ConfigError,
+    CommandError
+}
 
 #[derive(Default)]
 pub struct ErrorManager {
@@ -46,20 +60,8 @@ impl DragonBotModule for ErrorManager {
 
 impl ErrorManager {
     pub fn module_error(&mut self, module: &impl DragonBotModule, error: &ModuleError) {
-        let error_string = match &error {
-            ModuleError::TgDbError(e) => {
-                format!("[{}] TgDbError: {:?}", module.id(), e)
-            }
-            ModuleError::ModuleManagerError(e) => {
-                format!("[{}] ModuleManagerError: {:?}", module.id(), e)
-            }
-            ModuleError::PermissionsError(e) => {
-                format!("[{}] PermissionsError: {:?}", module.id(), e)
-            }
-            ModuleError::ConfigError(e) => {
-                format!("[{}] ConfigError: {:?}", module.id(), e)
-            }
-        };
+        let error_string = ErrorManager::get_module_error_string(module, error);
+
         error!("{}", &error_string);
         self.all_error_log.push(error_string.clone());
         self.module_error_log

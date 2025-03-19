@@ -1,18 +1,27 @@
-use std::{
-    env,
-    fs::{create_dir_all, exists},
-    path::PathBuf,
-    process::exit,
-};
+use std::{env, fs::exists, path::PathBuf, process::exit};
 
 use log::{error, info, warn};
 use module::event_handler::ModuleEventHandler;
-use serenity::{Client, all::GatewayIntents};
-use tokio::{main, sync::OnceCell};
+use serenity::{
+    Client,
+    all::{GatewayIntents, GuildId},
+};
+use tokio::{fs::create_dir_all, io, main, sync::OnceCell};
 
 pub mod module;
 
-pub fn data_path() -> PathBuf {
+pub async fn config_path(guild: &GuildId) -> Result<PathBuf, io::Error> {
+    let path = data_path().await?.join("config").join(guild.to_string());
+    if exists(&path).is_err() {
+        if let Err(e) = create_dir_all(&path).await {
+            error!("failed to create config directory: {e}");
+            return Err(e);
+        }
+    }
+    Ok(path)
+}
+
+async fn data_path() -> Result<PathBuf, io::Error> {
     if !DATA_PATH.initialized() {
         DATA_PATH
             .set(if let Ok(data_path) = env::var("DATA_PATH") {
@@ -38,21 +47,18 @@ pub fn data_path() -> PathBuf {
 
         let data_path = DATA_PATH.get().unwrap();
         if exists(data_path).is_err() {
-            if let Err(error) = create_dir_all(data_path) {
-                error!("failed to create data directory: {error}");
-                exit(1);
-            }
+            create_dir_all(data_path).await?
         }
     }
 
-    DATA_PATH.get().unwrap().into()
+    Ok(DATA_PATH.get().unwrap().into())
 }
 static DATA_PATH: OnceCell<String> = OnceCell::const_new();
 
 #[main]
 async fn main() {
     env_logger::init();
-    data_path();
+    data_path().await.expect("failed to init data path");
 
     let token = env::var("DISCORD_TOKEN");
     if token.is_err() {

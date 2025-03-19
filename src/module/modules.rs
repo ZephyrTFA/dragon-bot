@@ -2,7 +2,7 @@ use super::{
     DragonBotModule, config::ConfigManager, errors::ErrorManager, permissions::PermissionsManager,
     tg_verify::TgVerify, tgdb::TgDb,
 };
-use serenity::all::{Context, Interaction};
+use serenity::all::{Context, CreateCommand, Interaction};
 
 pub enum DragonBotModuleInstance {
     TgDb(TgDb),
@@ -49,6 +49,14 @@ macro_rules! impl_from {
                 match self {
                     $(
                         DragonBotModuleInstance::$type(instance) => instance.command_handle(ctx, interaction).await,
+                    )+
+                }
+            }
+
+            pub fn command_builder(&self) -> Option<CreateCommand> {
+                match self {
+                    $(
+                        DragonBotModuleInstance::$type(instance) => instance.command_builder(),
                     )+
                 }
             }
