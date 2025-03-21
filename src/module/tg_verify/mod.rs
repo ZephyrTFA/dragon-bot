@@ -1,16 +1,22 @@
-mod config;
-mod discord_link;
-
 use super::{
-    DragonBotModule,
     config::Configurable,
     errors::ModuleError,
-    manager::module_manager,
     tgdb::{TgDb, TgDbError},
+};
+use crate::{
+    core::{
+        commands::DragonModuleCommand, module::DragonBotModule,
+        permissions::DragonModulePermissions,
+    },
+    get_module,
 };
 use discord_link::ByondDiscordLink;
 use mysql::{params, prelude::Queryable};
 use serenity::all::GuildId;
+use std::ops::Deref;
+
+mod config;
+mod discord_link;
 
 #[derive(Default)]
 pub struct TgVerify;
@@ -24,6 +30,9 @@ impl DragonBotModule for TgVerify {
     }
 }
 
+impl DragonModulePermissions for TgVerify {}
+impl DragonModuleCommand for TgVerify {}
+
 impl TgVerify {
     pub async fn query_ckey(
         &self,
@@ -33,9 +42,7 @@ impl TgVerify {
         let config = self.get_config(guild).await?;
         let discord_link_table = &config.discord_links_table;
 
-        let module_manager = module_manager().await;
-        let tgdb = module_manager.get_module::<TgDb>(guild)?;
-
+        get_module!(tgdb, instance, TgDb);
         Ok(tgdb
             .get_conn(guild)?
             .exec(
@@ -56,9 +63,7 @@ impl TgVerify {
         let config = self.get_config(guild).await?;
         let discord_link_table = &config.discord_links_table;
 
-        let module_manager = module_manager().await;
-        let tgdb = module_manager.get_module::<TgDb>(guild)?;
-
+        get_module!(tgdb, instance, TgDb);
         Ok(tgdb
             .get_conn(guild)?
             .exec(
@@ -79,9 +84,7 @@ impl TgVerify {
         let config = self.get_config(guild).await?;
         let discord_link_table = &config.discord_links_table;
 
-        let module_manager = module_manager().await;
-        let tgdb = module_manager.get_module::<TgDb>(guild)?;
-
+        get_module!(tgdb, instance, TgDb);
         Ok(tgdb
             .get_conn(guild)?
             .exec_first(
@@ -101,11 +104,9 @@ impl TgVerify {
     ) -> Result<(), ModuleError> {
         let config = self.get_config(guild).await?;
         let discord_link_table = &config.discord_links_table;
-
-        let module_manager = module_manager().await;
-        let tgdb = module_manager.get_module::<TgDb>(guild)?;
-
         let id = &link.id;
+
+        get_module!(tgdb, instance, TgDb);
         let result: Option<ByondDiscordLink> = tgdb
             .get_conn(guild)?
             .exec_first(

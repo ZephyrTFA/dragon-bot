@@ -1,9 +1,7 @@
+use super::TgVerify;
+use crate::module::config::Configurable;
 use serde::{Deserialize, Serialize};
 use serenity::all::RoleId;
-
-use crate::module::config::Configurable;
-
-use super::TgVerify;
 
 #[derive(Serialize, Deserialize, Default)]
 pub(super) struct TgVerifyConfig {

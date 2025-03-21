@@ -1,11 +1,12 @@
-use std::{collections::HashMap, time::Duration};
-
 mod config;
 
+use super::errors::ModuleError;
+use crate::core::{
+    commands::DragonModuleCommand, module::DragonBotModule, permissions::DragonModulePermissions,
+};
 use mysql::{Pool, PooledConn};
 use serenity::all::GuildId;
-
-use super::{DragonBotModule, errors::ModuleError};
+use std::{collections::HashMap, time::Duration};
 
 #[derive(Default)]
 pub struct TgDb {
@@ -33,6 +34,8 @@ impl DragonBotModule for TgDb {
         "tgdb"
     }
 }
+impl DragonModulePermissions for TgDb {}
+impl DragonModuleCommand for TgDb {}
 
 #[derive(Debug)]
 pub enum TgDbError {

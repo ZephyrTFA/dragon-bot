@@ -1,12 +1,12 @@
+use super::errors::ModuleError;
+use crate::{core::module::DragonBotModule, util::config_path};
+use serde::{Deserialize, Serialize};
+use serenity::{all::GuildId, async_trait};
 use std::io;
 use tokio::fs::read_to_string;
 
-use serde::{Deserialize, Serialize};
-use serenity::{all::GuildId, async_trait};
-
-use crate::config_path;
-
-use super::{DragonBotModule, errors::ModuleError};
+mod command;
+mod permission;
 
 #[derive(Debug)]
 pub enum ConfigError {
@@ -22,8 +22,7 @@ where
 {
     async fn get_config(&self, guild: GuildId) -> Result<C, ModuleError> {
         let config_path = config_path(&guild)
-            .await
-            .map_err(ConfigError::IoError)?
+            .await?
             .join(format!("{}.json", Self::module_id()));
         if !config_path.exists() {
             return Ok(C::default());
@@ -37,8 +36,7 @@ where
 
     async fn set_config(&self, guild: GuildId, config: C) -> Result<(), ModuleError> {
         let config_path = config_path(&guild)
-            .await
-            .map_err(ConfigError::IoError)?
+            .await?
             .join(format!("{}.json", Self::module_id()));
         let json = serde_json::to_string(&config)
             .map_err(ConfigError::SerdeError)?

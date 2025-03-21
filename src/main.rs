@@ -1,63 +1,38 @@
-use std::{env, fs::exists, path::PathBuf, process::exit};
+use chrono::Utc;
+use core::event_handler::ModuleEventHandler;
+use fern::colors::{Color, ColoredLevelConfig};
+use log::{LevelFilter, error, info};
+use serenity::{Client, all::GatewayIntents};
+use std::env;
+use tokio::main;
+use util::data_path;
 
-use log::{error, info, warn};
-use module::event_handler::ModuleEventHandler;
-use serenity::{
-    Client,
-    all::{GatewayIntents, GuildId},
-};
-use tokio::{fs::create_dir_all, io, main, sync::OnceCell};
-
+pub mod core;
 pub mod module;
-
-pub async fn config_path(guild: &GuildId) -> Result<PathBuf, io::Error> {
-    let path = data_path().await?.join("config").join(guild.to_string());
-    if exists(&path).is_err() {
-        if let Err(e) = create_dir_all(&path).await {
-            error!("failed to create config directory: {e}");
-            return Err(e);
-        }
-    }
-    Ok(path)
-}
-
-async fn data_path() -> Result<PathBuf, io::Error> {
-    if !DATA_PATH.initialized() {
-        DATA_PATH
-            .set(if let Ok(data_path) = env::var("DATA_PATH") {
-                data_path
-            } else {
-                warn!("DATA_PATH not set, defaulting to local data directory.");
-
-                dirs::data_dir()
-                    .or_else(|| {
-                        error!("failed to locate data directory");
-                        exit(1);
-                    })
-                    .unwrap()
-                    .join("dragon-bot")
-                    .display()
-                    .to_string()
-            })
-            .unwrap_or_else(|e| {
-                error!("failed to set data path static cell: {e}");
-                exit(1);
-            });
-        info!("Data Directory: {:?}", DATA_PATH.get().unwrap());
-
-        let data_path = DATA_PATH.get().unwrap();
-        if exists(data_path).is_err() {
-            create_dir_all(data_path).await?
-        }
-    }
-
-    Ok(DATA_PATH.get().unwrap().into())
-}
-static DATA_PATH: OnceCell<String> = OnceCell::const_new();
+pub mod util;
 
 #[main]
 async fn main() {
-    env_logger::init();
+    let fern_colors = ColoredLevelConfig::new()
+        .info(Color::Green)
+        .debug(Color::Blue);
+    fern::Dispatch::new()
+        .level(LevelFilter::Info)
+        .level_for("dragon_bot", LevelFilter::Debug)
+        .level_for("tracing", LevelFilter::Off)
+        .level_for("serenity", LevelFilter::Warn)
+        .format(move |out, message, record| {
+            out.finish(format_args!(
+                "[{}][{}][{}] {message}",
+                Utc::now(),
+                fern_colors.color(record.level()),
+                record.target().split("::").next().unwrap()
+            ))
+        })
+        .chain(std::io::stdout())
+        .apply()
+        .expect("failed to set fern as logger");
+
     data_path().await.expect("failed to init data path");
 
     let token = env::var("DISCORD_TOKEN");

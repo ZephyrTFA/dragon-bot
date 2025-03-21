@@ -1,8 +1,10 @@
+use super::{config::Configurable, errors::ModuleError};
+use crate::core::{module::DragonBotModule, permissions::DragonModulePermissions};
 use serenity::all::{Guild, Member, RoleId};
 
-use super::{DragonBotModule, config::Configurable, errors::ModuleError};
-
+mod command;
 mod config;
+mod permission;
 
 #[derive(Default)]
 pub struct PermissionsManager;
@@ -23,19 +25,18 @@ pub enum PermissionsError {
     PermissionNotGiven,
 }
 
-pub trait ModulePermissions
-where
-    Self: DragonBotModule,
-{
-    fn permissions() -> &'static [&'static str];
-}
-
 impl PermissionsManager {
     pub async fn has_permission(
         &self,
+        module: &impl DragonModulePermissions,
         member: &Member,
         permission: &str,
     ) -> Result<bool, ModuleError> {
+        if !module.all_permissions().contains(&permission) {
+            Err(PermissionsError::PermissionNotFound)?;
+            unreachable!();
+        }
+
         let guild_config = self.get_config(member.guild_id).await?;
         let permission = permission.to_string();
 

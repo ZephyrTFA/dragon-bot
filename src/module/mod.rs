@@ -1,43 +1,7 @@
-use errors::ModuleError;
-use serenity::all::{Context, CreateCommand, Interaction};
-
+pub mod commands;
 pub mod config;
 pub mod errors;
-pub mod event_handler;
-pub mod manager;
-pub mod modules;
+pub mod module_manager;
 pub mod permissions;
 pub mod tg_verify;
 pub mod tgdb;
-
-pub trait DragonBotModule
-where
-    Self: Default,
-{
-    fn module_id() -> &'static str
-    where
-        Self: Sized;
-
-    fn id(&self) -> &'static str
-    where
-        Self: Sized,
-    {
-        Self::module_id()
-    }
-
-    fn init(&mut self, _ctx: &Context) -> impl Future<Output = Result<(), ModuleError>> {
-        async { Ok(()) }
-    }
-
-    fn command_builder(&self) -> Option<CreateCommand> {
-        None
-    }
-
-    fn command_handle(&self, _ctx: Context, _interaction: Interaction) -> impl Future<Output = ()> {
-        async {}
-    }
-
-    fn command_help(&self, _ctx: Context, _interaction: Interaction) -> impl Future<Output = ()> {
-        async { todo!("default help handler") }
-    }
-}

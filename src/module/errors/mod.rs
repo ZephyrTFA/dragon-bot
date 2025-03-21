@@ -1,10 +1,13 @@
-use std::collections::HashMap;
-
 use super::{
-    DragonBotModule, config::ConfigError, event_handler::CommandError, manager::ModuleManagerError,
+    commands::CommandError, config::ConfigError, module_manager::ModuleManagerError,
     permissions::PermissionsError, tgdb::TgDbError,
 };
+use crate::core::module::DragonBotModule;
 use log::error;
+use std::collections::HashMap;
+
+mod command;
+mod permissions;
 
 macro_rules! module_error_types {
     ( $( $type: ident ),+ ) => {
