@@ -57,6 +57,7 @@ impl<'a> ModuleManager {
     pub fn get_all_active_module_ids(&self, guild: GuildId) -> Vec<String> {
         let mut active_modules = self.active_modules.get(&guild).cloned().unwrap_or_default();
         active_modules.push(Self::module_id().to_string());
+        active_modules.sort();
         active_modules
     }
 
