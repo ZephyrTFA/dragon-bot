@@ -66,6 +66,14 @@ macro_rules! impl_from {
                     )+
                 }
             }
+
+            pub fn all_module_ids() -> Vec<&'static str> {
+                vec![
+                    $(
+                        $type::module_id(),
+                    )+
+                ]
+            }
         }
 
         pub fn init_modules() -> HashMap<String, DragonBotModuleInstance> {

@@ -3,8 +3,10 @@ use std::ops::Deref;
 use super::ModuleManager;
 use crate::{
     core::{
-        commands::DragonModuleCommand, event_handler::ModuleEventHandler, module::DragonBotModule,
-        modules::get_module_instance_by_id,
+        commands::DragonModuleCommand,
+        event_handler::ModuleEventHandler,
+        module::DragonBotModule,
+        modules::{DragonBotModuleInstance, get_module_instance_by_id},
     },
     module::errors::ModuleError,
 };
@@ -48,7 +50,17 @@ impl DragonModuleCommand for ModuleManager {
                         )
                         .required(true),
                     ),
-                ),
+                )
+                .add_option(CreateCommandOption::new(
+                    CommandOptionType::SubCommand,
+                    "list-all",
+                    "list all available modules",
+                ))
+                .add_option(CreateCommandOption::new(
+                    CommandOptionType::SubCommand,
+                    "list-active",
+                    "list all active modules",
+                )),
         )
     }
 
@@ -116,6 +128,38 @@ impl DragonModuleCommand for ModuleManager {
                 }
                 _ => unreachable!(),
             },
+            "list-active" => {
+                let mut response = "```diff\n".to_string();
+                for active in self.get_all_active_module_ids(guild) {
+                    response.push_str(format!("+ {}\n", active).as_str());
+                }
+                response.push_str("```\n");
+                if let Err(error) = command
+                    .create_followup(
+                        ctx.http(),
+                        CreateInteractionResponseFollowup::new().content(response),
+                    )
+                    .await
+                {
+                    warn!("Failed to send interaction response: {error}");
+                };
+            }
+            "list-all" => {
+                let mut response = "```diff\n".to_string();
+                for module in DragonBotModuleInstance::all_module_ids() {
+                    response.push_str(format!("{}\n", module).as_str());
+                }
+                response.push_str("```\n");
+                if let Err(error) = command
+                    .create_followup(
+                        ctx.http(),
+                        CreateInteractionResponseFollowup::new().content(response),
+                    )
+                    .await
+                {
+                    warn!("Failed to send interaction response: {error}");
+                };
+            }
             e => warn!("unknown module manager subcommand: {e}"),
         }
 

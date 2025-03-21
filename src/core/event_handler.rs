@@ -3,7 +3,7 @@ use crate::{
     core::modules::get_module_instance_by_id, get_module, get_module_mut,
     module::module_manager::ModuleManager,
 };
-use log::{error, warn};
+use log::{debug, error, warn};
 use serenity::{
     all::{
         CacheHttp, Context, CreateInteractionResponseFollowup, EventHandler, Interaction, Ready,
@@ -26,6 +26,13 @@ impl ModuleEventHandler {
     }
 
     async fn init_commands(&self, ctx: &Context) {
+        for global in ctx.http().get_global_commands().await.iter().flatten() {
+            if let Err(error) = ctx.http().delete_global_command(global.id).await {
+                warn!("Failed to delete global command: {error}");
+            } else {
+                debug!("deleted global command: {}", global.name);
+            }
+        }
         if let Err(err) = Self::init_guild_commands(ctx).await {
             warn!("failed to initialize guild commands: {err:?}");
         }

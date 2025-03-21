@@ -83,34 +83,45 @@ impl ModuleEventHandler {
             for command in current_commands.iter().flatten() {
                 if let Err(error) = ctx.http().delete_guild_command(guild.id, command.id).await {
                     warn!("Failed to delete old command: {error}");
+                } else {
+                    debug!("deleted old command: {}", command.name);
                 }
             }
 
+            let mut wanted_commands = vec![];
+
+            debug!("getting active modules");
             get_module!(manager, instance, ModuleManager);
-            let active_modules = manager.get_all_active_module_ids(guild.id);
+            let active_modules = manager.get_all_active_module_ids(guild.id).clone();
+            if let Some(manager_command) = manager.command_builder() {
+                wanted_commands.push(manager_command);
+            }
             drop(instance);
 
-            let mut wanted_commands = vec![];
+            debug!("getting wanted commands");
             for active_module in active_modules {
+                debug!("checking: {active_module}");
                 let module = get_module_instance_by_id(&active_module).await?;
                 if let Some(command) = module.command_builder() {
                     debug!("wanted command: {:?}", command);
                     wanted_commands.push(command);
                 }
+                drop(module);
             }
 
+            debug!("creating commands");
             let mut created_commands = vec![];
-            for new in wanted_commands
-                .into_iter()
-                .map(async |builder| builder.execute(ctx.http(), (None, None)).await)
-            {
-                let new = new.await;
-                if let Err(e) = &new {
+            for new in wanted_commands {
+                debug!("creating...");
+                let command = new.execute(ctx.http(), (Some(guild.id), None)).await;
+                debug!("created!");
+                if let Err(e) = &command {
                     warn!("Failed to create command: {e}");
                     continue;
+                } else {
+                    debug!("created: {}", command.as_ref().unwrap().name);
+                    created_commands.push(command.unwrap());
                 }
-
-                created_commands.push(new.unwrap());
             }
 
             for command in created_commands {
