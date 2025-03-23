@@ -1,6 +1,4 @@
-use super::module::{
-    DragonBotModule, GetModule, get_module_by_id, get_module_by_id_mut, get_module_mut,
-};
+use super::module::{DragonBotModule, GetModule, get_module_by_id_mut, get_module_mut};
 use crate::{core::module::get_module, module::module_manager::ModuleManager};
 use log::{debug, error, info, warn};
 use serenity::{

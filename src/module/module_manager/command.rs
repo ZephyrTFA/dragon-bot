@@ -81,9 +81,9 @@ impl DragonModuleCommand for ModuleManager {
                 if assert_permission(
                     ctx,
                     command,
-                    self,
                     command.member.as_ref().unwrap(),
                     PERMISSION_MODULE_ACTIVATE,
+                    None,
                 )
                 .await? =>
             {
@@ -121,9 +121,9 @@ impl DragonModuleCommand for ModuleManager {
                 if assert_permission(
                     ctx,
                     command,
-                    self,
                     command.member.as_ref().unwrap(),
                     PERMISSION_MODULE_ACTIVATE,
+                    None,
                 )
                 .await? =>
             {

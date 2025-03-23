@@ -1,4 +1,4 @@
-use super::module::{DragonBotModule, GetModule};
+use super::module::{DragonBotModuleHolder, GetModule};
 use crate::{
     core::module::get_module,
     module::{errors::ModuleError, permissions::PermissionsManager},
@@ -39,17 +39,25 @@ pub trait DragonModulePermissions {
 pub async fn assert_permission(
     ctx: &Context,
     command: &CommandInteraction,
-    module: &impl DragonBotModule,
     member: &Member,
     permission: ModulePermission,
+    permissions_manager: Option<&PermissionsManager>,
 ) -> Result<bool, ModuleError> {
-    let holder = get_module::<PermissionsManager>().await;
-    let permissions: &PermissionsManager = holder.module();
+    if member.permissions.is_some_and(|perm| perm.administrator()) {
+        return Ok(true);
+    }
 
-    if !permissions
-        .has_permission(module, member, permission)
-        .await?
-    {
+    let permissions: &PermissionsManager;
+    let holder: DragonBotModuleHolder;
+
+    if let Some(manager) = permissions_manager {
+        permissions = manager;
+    } else {
+        holder = get_module::<PermissionsManager>().await;
+        permissions = holder.module();
+    }
+
+    if !permissions.has_permission(member, permission).await? {
         if let Err(error) = command
             .create_followup(
                 ctx.http(),

@@ -1,9 +1,7 @@
 use super::{config::Configurable, errors::ModuleError};
-use crate::core::{
-    module::DragonBotModule,
-    permissions::{DragonModulePermissions, ModulePermission},
-};
-use serenity::all::{Guild, Member, RoleId};
+use crate::core::{module::DragonBotModule, permissions::ModulePermission};
+use serenity::all::{GenericId, GuildId, Member};
+use std::collections::HashMap;
 
 mod command;
 mod config;
@@ -29,32 +27,23 @@ pub enum PermissionsError {
 }
 
 impl PermissionsManager {
-    pub async fn has_permission(
+    async fn has_permission_str(
         &self,
-        module: &impl DragonModulePermissions,
         member: &Member,
-        permission: ModulePermission,
+        namespace: &str,
+        permission: &str,
     ) -> Result<bool, ModuleError> {
-        if !module.all_permissions().await.contains(&permission) {
-            Err(PermissionsError::PermissionNotFound)?;
-            unreachable!();
-        }
-
-        let guild_config = self.get_config(member.guild_id).await?;
-
-        let user_permissions = &guild_config.user;
-        if user_permissions
-            .get(&member.user.id)
-            .is_some_and(|permissions| permissions.iter().any(|perm| perm == permission.id()))
+        let mut guild_config = self.get_config(member.guild_id).await?;
+        for id in [member.user.id.get()]
+            .into_iter()
+            .chain(member.roles.iter().map(|role| role.get()))
         {
-            return Ok(true);
-        }
-
-        let role_permissions = &guild_config.role;
-        for role in &member.roles {
-            if role_permissions
-                .get(role)
-                .is_some_and(|permissions| permissions.iter().any(|perm| perm == permission.id()))
+            if guild_config
+                .namespaces
+                .entry(namespace.to_string())
+                .or_default()
+                .get(&GenericId::new(id))
+                .is_some_and(|granted| granted.contains(&permission.to_string()))
             {
                 return Ok(true);
             }
@@ -63,72 +52,82 @@ impl PermissionsManager {
         Ok(false)
     }
 
-    pub async fn give_permission_user(
+    async fn give_permission_str(
+        &self,
+        guild: GuildId,
+        target: GenericId,
+        namespace: &str,
+        permission: &str,
+    ) -> Result<(), ModuleError> {
+        let permission = permission.to_string();
+        let mut guild_config = self.get_config(guild).await?;
+
+        let namespaces = &mut guild_config.namespaces;
+        let namespace = namespaces
+            .entry(namespace.to_string())
+            .or_insert_with(HashMap::new);
+
+        let permissions = namespace.entry(target).or_insert_with(Vec::new);
+        if permissions.contains(&permission) {
+            Err(PermissionsError::PermissionAlreadyGiven)?;
+            unreachable!()
+        }
+        permissions.push(permission);
+
+        self.set_config(guild, guild_config).await
+    }
+
+    async fn take_permission_str(
+        &self,
+        guild: GuildId,
+        target: GenericId,
+        namespace: &str,
+        permission: &str,
+    ) -> Result<(), ModuleError> {
+        let permission = permission.to_string();
+        let mut guild_config = self.get_config(guild).await?;
+
+        let namespaces = &mut guild_config.namespaces;
+        let namespace = namespaces
+            .entry(namespace.to_string())
+            .or_insert_with(HashMap::new);
+
+        let permissions = namespace.entry(target).or_insert_with(Vec::new);
+        if permissions.contains(&permission) {
+            Err(PermissionsError::PermissionNotGiven)?;
+            unreachable!()
+        }
+        permissions.retain(|perm| *perm != permission);
+
+        self.set_config(guild, guild_config).await
+    }
+
+    pub async fn has_permission(
         &self,
         member: &Member,
-        permission: &str,
-    ) -> Result<(), ModuleError> {
-        let mut guild_config = self.get_config(member.guild_id).await?;
-
-        let permissions = &mut guild_config.user;
-        permissions
-            .entry(member.user.id)
-            .or_insert_with(std::vec::Vec::new);
-
-        let user_permissions = permissions.get_mut(&member.user.id).unwrap();
-        if user_permissions.contains(&permission.to_string()) {
-            return Err(PermissionsError::PermissionAlreadyGiven.into());
-        }
-        user_permissions.push(permission.to_string());
-
-        self.set_config(member.guild_id, guild_config).await
+        permission: ModulePermission,
+    ) -> Result<bool, ModuleError> {
+        self.has_permission_str(member, permission.module(), permission.id())
+            .await
     }
 
-    pub async fn take_permission_user(
+    pub async fn give_permission(
         &self,
-        member: &Member,
-        permission: &str,
+        guild: GuildId,
+        target: GenericId,
+        permission: ModulePermission,
     ) -> Result<(), ModuleError> {
-        let mut guild_config = self.get_config(member.guild_id).await?;
-        let permissions = &mut guild_config.user;
-        if !permissions.contains_key(&member.user.id) {
-            return Err(PermissionsError::PermissionNotGiven.into());
-        }
-        let user_permissions = permissions.get_mut(&member.user.id).unwrap();
-        user_permissions.retain(|user_permission| user_permission != permission);
-
-        self.set_config(member.guild_id, guild_config).await
+        self.give_permission_str(guild, target, permission.module(), permission.id())
+            .await
     }
 
-    pub async fn give_permission_role(
+    pub async fn take_permission(
         &self,
-        guild: &Guild,
-        role: RoleId,
-        permission: &str,
+        guild: GuildId,
+        target: GenericId,
+        permission: ModulePermission,
     ) -> Result<(), ModuleError> {
-        let mut guild_config = self.get_config(guild.id).await?;
-        let permissions = &mut guild_config.role;
-        permissions.entry(role).or_insert_with(std::vec::Vec::new);
-        let permissions = permissions.get_mut(&role).unwrap();
-        permissions.push(permission.to_string());
-
-        self.set_config(guild.id, guild_config).await
-    }
-
-    pub async fn take_permission_role(
-        &self,
-        guild: &Guild,
-        role: RoleId,
-        permission: &str,
-    ) -> Result<(), ModuleError> {
-        let mut guild_config = self.get_config(guild.id).await?;
-        let permissions = &mut guild_config.role;
-        if !permissions.contains_key(&role) {
-            return Ok(());
-        }
-        let permissions = permissions.get_mut(&role).unwrap();
-        permissions.retain(|user_permission| user_permission != permission);
-
-        self.set_config(guild.id, guild_config).await
+        self.take_permission_str(guild, target, permission.module(), permission.id())
+            .await
     }
 }
