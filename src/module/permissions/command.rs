@@ -76,7 +76,6 @@ impl DragonModuleCommand for PermissionsManager {
             return Ok(());
         }
 
-        debug!("{options:#?}");
         let module = options.first().unwrap();
         if let CommandDataOptionValue::SubCommandGroup(operation) = &module.value {
             let operation = operation.first().unwrap();
@@ -153,6 +152,6 @@ impl DragonModuleCommand for PermissionsManager {
             }
         }
 
-        todo!()
+        Ok(())
     }
 }
