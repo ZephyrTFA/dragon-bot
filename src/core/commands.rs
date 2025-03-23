@@ -8,8 +8,8 @@ use log::{debug, info, warn};
 use serenity::all::{Builder, CacheHttp, CommandInteraction, Context, CreateCommand, GuildId};
 
 pub trait DragonModuleCommand {
-    fn command_builder(&self) -> Option<CreateCommand> {
-        None
+    fn command_builder(&self) -> impl Future<Output = Option<CreateCommand>> {
+        async { None }
     }
 
     fn command_handle(
@@ -35,7 +35,7 @@ impl ModuleEventHandler {
         guild: GuildId,
         module: &DragonBotModuleInstance,
     ) {
-        let builder = module.command_builder();
+        let builder = module.command_builder().await;
         if builder.is_none() {
             return;
         }
@@ -88,13 +88,14 @@ impl ModuleEventHandler {
 
             let mut wanted_commands = vec![];
 
-            let manager = get_module::<ModuleManager>().await;
-            let manager: &ModuleManager = manager.module();
+            let holder = get_module::<ModuleManager>().await;
+            let manager: &ModuleManager = holder.module();
 
             let active_modules = manager.get_all_active_module_ids(guild.id).clone();
-            if let Some(manager_command) = manager.command_builder() {
-                wanted_commands.push(manager_command);
+            if let Some(manager_command) = manager.command_builder().await {
+                wanted_commands.push(manager_command.clone());
             }
+            drop(holder);
 
             debug!("getting wanted commands");
             for active_module in active_modules {
@@ -105,25 +106,19 @@ impl ModuleEventHandler {
                     continue;
                 }
                 let module = module.unwrap();
-
-                if let Some(command) = module.instance().command_builder() {
-                    debug!("wanted command: {:?}", command);
+                if let Some(command) = module.instance().command_builder().await {
+                    debug!("wanted command: {:#?}", command);
                     wanted_commands.push(command);
                 }
-                drop(module);
             }
 
-            debug!("creating commands");
             let mut created_commands = vec![];
             for new in wanted_commands {
-                debug!("creating...");
                 let command = new.execute(ctx.http(), (Some(guild.id), None)).await;
-                debug!("created!");
                 if let Err(e) = &command {
                     warn!("Failed to create command: {e}");
                     continue;
                 } else {
-                    debug!("created: {}", command.as_ref().unwrap().name);
                     created_commands.push(command.unwrap());
                 }
             }

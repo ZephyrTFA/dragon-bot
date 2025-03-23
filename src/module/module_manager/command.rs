@@ -16,7 +16,7 @@ use serenity::all::{
 };
 
 impl DragonModuleCommand for ModuleManager {
-    fn command_builder(&self) -> Option<CreateCommand> {
+    async fn command_builder(&self) -> Option<CreateCommand> {
         Some(
             CreateCommand::new(ModuleManager::module_id())
                 .description("module manager")

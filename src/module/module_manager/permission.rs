@@ -1,12 +1,13 @@
-use crate::core::permissions::DragonModulePermissions;
-
 use super::ModuleManager;
+use crate::core::permissions::{DragonModulePermissions, ModulePermission};
 
-pub const PERMISSION_MODULE_ACTIVATE: &str = "module-activate";
-pub const PERMISSION_MODULE_DEACTIVATE: &str = "module-deactivate";
+pub const PERMISSION_MODULE_ACTIVATE: ModulePermission =
+    ModulePermission::new("module-manager", "module-activate", "activate a module");
+pub const PERMISSION_MODULE_DEACTIVATE: ModulePermission =
+    ModulePermission::new("module-manager", "module-deactivate", "deactivate a module");
 
 impl DragonModulePermissions for ModuleManager {
-    fn all_permissions(&self) -> &'static [&'static str] {
-        &[PERMISSION_MODULE_ACTIVATE, PERMISSION_MODULE_DEACTIVATE]
+    async fn all_permissions(&self) -> Vec<ModulePermission> {
+        vec![PERMISSION_MODULE_ACTIVATE, PERMISSION_MODULE_DEACTIVATE]
     }
 }

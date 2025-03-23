@@ -4,7 +4,7 @@ use log::warn;
 use serenity::all::{CommandInteraction, Context, CreateCommand};
 
 impl DragonModuleCommand for ConfigManager {
-    fn command_builder(&self) -> Option<CreateCommand> {
+    async fn command_builder(&self) -> Option<CreateCommand> {
         warn!("todo: ConfigManager::command_builder");
         None
     }

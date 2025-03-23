@@ -1,9 +1,8 @@
-use super::module::{DragonBotModule, get_module_by_id};
-use crate::{
-    core::module::{GetModule, get_module},
-    module::module_manager::ModuleManager,
+use super::module::{
+    DragonBotModule, GetModule, get_module_by_id, get_module_by_id_mut, get_module_mut,
 };
-use log::{debug, error, warn};
+use crate::{core::module::get_module, module::module_manager::ModuleManager};
+use log::{debug, error, info, warn};
 use serenity::{
     all::{
         CacheHttp, Context, CreateInteractionResponseFollowup, EventHandler, Interaction, Ready,
@@ -16,12 +15,14 @@ pub struct ModuleEventHandler;
 
 impl ModuleEventHandler {
     async fn init_modules(&self, ctx: &Context) {
-        let mut manager = get_module::<ModuleManager>().await;
-        let manager: &mut ModuleManager = manager.module_mut();
+        info!("Initializing modules...");
+        let mut holder = get_module_mut::<ModuleManager>().await;
+        let manager: &mut ModuleManager = holder.module_mut();
         if let Err(err) = manager.init(ctx).await {
-            error!("failed to initialize module manager: {err:?}");
+            error!("Failed to initialize modules: {err:?}");
             exit(1);
         }
+        info!("Modules initialized.");
     }
 
     async fn init_commands(&self, ctx: &Context) {
@@ -66,7 +67,7 @@ impl EventHandler for ModuleEventHandler {
                 return;
             }
 
-            let module = get_module_by_id(&command.data.name).await;
+            let module = get_module_by_id_mut(&command.data.name).await;
             if module.is_none() {
                 warn!(
                     "Attempted to run an unknown interaction: {}",

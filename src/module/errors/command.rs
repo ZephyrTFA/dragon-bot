@@ -6,7 +6,7 @@ use crate::core::commands::DragonModuleCommand;
 use super::{ErrorManager, ModuleError};
 
 impl DragonModuleCommand for ErrorManager {
-    fn command_builder(&self) -> Option<CreateCommand> {
+    async fn command_builder(&self) -> Option<CreateCommand> {
         warn!("todo: ErrorManager::command_builder");
         None
     }

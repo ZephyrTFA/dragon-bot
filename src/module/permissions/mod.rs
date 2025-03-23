@@ -1,5 +1,8 @@
 use super::{config::Configurable, errors::ModuleError};
-use crate::core::{module::DragonBotModule, permissions::DragonModulePermissions};
+use crate::core::{
+    module::DragonBotModule,
+    permissions::{DragonModulePermissions, ModulePermission},
+};
 use serenity::all::{Guild, Member, RoleId};
 
 mod command;
@@ -30,20 +33,19 @@ impl PermissionsManager {
         &self,
         module: &impl DragonModulePermissions,
         member: &Member,
-        permission: &str,
+        permission: ModulePermission,
     ) -> Result<bool, ModuleError> {
-        if !module.all_permissions().contains(&permission) {
+        if !module.all_permissions().await.contains(&permission) {
             Err(PermissionsError::PermissionNotFound)?;
             unreachable!();
         }
 
         let guild_config = self.get_config(member.guild_id).await?;
-        let permission = permission.to_string();
 
         let user_permissions = &guild_config.user;
         if user_permissions
             .get(&member.user.id)
-            .is_some_and(|permissions| permissions.contains(&permission))
+            .is_some_and(|permissions| permissions.iter().any(|perm| perm == permission.id()))
         {
             return Ok(true);
         }
@@ -52,7 +54,7 @@ impl PermissionsManager {
         for role in &member.roles {
             if role_permissions
                 .get(role)
-                .is_some_and(|permissions| permissions.contains(&permission))
+                .is_some_and(|permissions| permissions.iter().any(|perm| perm == permission.id()))
             {
                 return Ok(true);
             }

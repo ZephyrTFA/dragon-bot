@@ -8,9 +8,31 @@ use serenity::all::{
     CacheHttp, CommandInteraction, Context, CreateInteractionResponseFollowup, Member,
 };
 
+pub struct ModulePermission(&'static str, &'static str, &'static str);
+impl ModulePermission {
+    pub const fn new(module: &'static str, id: &'static str, desc: &'static str) -> Self {
+        Self(module, id, desc)
+    }
+    pub fn module(&self) -> &str {
+        self.0
+    }
+    pub fn id(&self) -> &str {
+        self.1
+    }
+    pub fn desc(&self) -> &str {
+        self.2
+    }
+}
+
+impl PartialEq for ModulePermission {
+    fn eq(&self, other: &Self) -> bool {
+        (self.id() == other.id()) && (self.module() == other.module())
+    }
+}
+
 pub trait DragonModulePermissions {
-    fn all_permissions(&self) -> &'static [&'static str] {
-        &[]
+    fn all_permissions(&self) -> impl Future<Output = Vec<ModulePermission>> {
+        async { vec![] }
     }
 }
 
@@ -19,10 +41,10 @@ pub async fn assert_permission(
     command: &CommandInteraction,
     module: &impl DragonBotModule,
     member: &Member,
-    permission: &str,
+    permission: ModulePermission,
 ) -> Result<bool, ModuleError> {
-    let permissions = get_module::<PermissionsManager>().await;
-    let permissions: &PermissionsManager = permissions.module();
+    let holder = get_module::<PermissionsManager>().await;
+    let permissions: &PermissionsManager = holder.module();
 
     if !permissions
         .has_permission(module, member, permission)
