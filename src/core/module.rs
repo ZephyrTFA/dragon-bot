@@ -1,6 +1,17 @@
-use super::{commands::DragonModuleCommand, permissions::DragonModulePermissions};
+use std::{
+    collections::HashMap,
+    marker::PhantomData,
+    ops::{Deref, DerefMut},
+    sync::OnceLock,
+};
+
+use super::{
+    commands::DragonModuleCommand, modules::DragonBotModuleInstance,
+    permissions::DragonModulePermissions,
+};
 use crate::module::errors::ModuleError;
 use serenity::all::Context;
+use tokio::sync::{Mutex, MutexGuard};
 
 pub trait DragonBotModule
 where
@@ -77,19 +88,56 @@ macro_rules! impl_from {
                 ids
             }
         }
-
-        pub fn init_modules() -> HashMap<String, DragonBotModuleInstance> {
-            static INIT_STATE: OnceCell<()> = OnceCell::const_new();
-            if INIT_STATE.initialized() {
-                panic!("attempt to init modules more than once!");
-            }
-            _ = INIT_STATE.set(());
-
-            vec![
-            $(
-                DragonBotModuleInstance::$type($type::default()),
-            )+
-            ].into_iter().map(|m| (m.module_id().to_string(), m)).collect()
-        }
     };
+}
+
+static MODULES: OnceLock<HashMap<String, Mutex<DragonBotModuleInstance>>> = OnceLock::new();
+
+pub struct DragonBotModuleHolder {
+    guard: MutexGuard<'static, DragonBotModuleInstance>,
+}
+
+pub trait GetModule<'a, T> {
+    fn module(&'a self) -> &'a T;
+    fn module_mut(&'a mut self) -> &'a mut T;
+}
+
+impl<'a, T> GetModule<'a, T> for DragonBotModuleHolder
+where
+    T: DragonBotModule + 'a,
+    &'a T: From<&'a DragonBotModuleInstance>,
+    &'a mut T: From<&'a mut DragonBotModuleInstance>,
+{
+    fn module(&'a self) -> &'a T {
+        let _: PhantomData<T>;
+        self.guard.deref().into()
+    }
+
+    fn module_mut(&'a mut self) -> &'a mut T {
+        self.guard.deref_mut().into()
+    }
+}
+
+impl DragonBotModuleHolder {
+    pub fn instance(&self) -> &DragonBotModuleInstance {
+        &self.guard
+    }
+
+    pub fn instance_mut(&mut self) -> &mut DragonBotModuleInstance {
+        &mut self.guard
+    }
+}
+
+pub async fn get_module<T>() -> DragonBotModuleHolder
+where
+    T: DragonBotModule,
+{
+    get_module_by_id(T::module_id()).await.unwrap()
+}
+
+pub async fn get_module_by_id<'a>(module: &str) -> Option<DragonBotModuleHolder> {
+    let modules = MODULES.get().expect("modules not init");
+    let mutex = modules.get(module)?;
+    let guard = mutex.lock().await;
+    Some(DragonBotModuleHolder { guard })
 }

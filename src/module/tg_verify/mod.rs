@@ -3,17 +3,14 @@ use super::{
     errors::ModuleError,
     tgdb::{TgDb, TgDbError},
 };
-use crate::{
-    core::{
-        commands::DragonModuleCommand, module::DragonBotModule,
-        permissions::DragonModulePermissions,
-    },
-    get_module,
+use crate::core::{
+    commands::DragonModuleCommand,
+    module::{DragonBotModule, GetModule, get_module},
+    permissions::DragonModulePermissions,
 };
 use discord_link::ByondDiscordLink;
 use mysql::{params, prelude::Queryable};
 use serenity::all::GuildId;
-use std::ops::Deref;
 
 mod config;
 mod discord_link;
@@ -42,7 +39,8 @@ impl TgVerify {
         let config = self.get_config(guild).await?;
         let discord_link_table = &config.discord_links_table;
 
-        get_module!(tgdb, instance, TgDb);
+        let tgdb = get_module::<TgDb>().await;
+        let tgdb: &TgDb = tgdb.module();
         Ok(tgdb
             .get_conn(guild)?
             .exec(
@@ -63,7 +61,8 @@ impl TgVerify {
         let config = self.get_config(guild).await?;
         let discord_link_table = &config.discord_links_table;
 
-        get_module!(tgdb, instance, TgDb);
+        let tgdb = get_module::<TgDb>().await;
+        let tgdb: &TgDb = tgdb.module();
         Ok(tgdb
             .get_conn(guild)?
             .exec(
@@ -84,7 +83,8 @@ impl TgVerify {
         let config = self.get_config(guild).await?;
         let discord_link_table = &config.discord_links_table;
 
-        get_module!(tgdb, instance, TgDb);
+        let tgdb = get_module::<TgDb>().await;
+        let tgdb: &TgDb = tgdb.module();
         Ok(tgdb
             .get_conn(guild)?
             .exec_first(
@@ -106,7 +106,8 @@ impl TgVerify {
         let discord_link_table = &config.discord_links_table;
         let id = &link.id;
 
-        get_module!(tgdb, instance, TgDb);
+        let tgdb = get_module::<TgDb>().await;
+        let tgdb: &TgDb = tgdb.module();
         let result: Option<ByondDiscordLink> = tgdb
             .get_conn(guild)?
             .exec_first(

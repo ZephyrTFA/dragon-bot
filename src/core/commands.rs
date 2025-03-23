@@ -1,13 +1,11 @@
 use super::{event_handler::ModuleEventHandler, modules::DragonBotModuleInstance};
 use crate::{
-    core::modules::get_module_instance_by_id,
-    get_module,
+    core::module::{GetModule, get_module, get_module_by_id},
     module::{errors::ModuleError, module_manager::ModuleManager},
     util::get_all_guilds,
 };
 use log::{debug, info, warn};
 use serenity::all::{Builder, CacheHttp, CommandInteraction, Context, CreateCommand, GuildId};
-use std::ops::Deref;
 
 pub trait DragonModuleCommand {
     fn command_builder(&self) -> Option<CreateCommand> {
@@ -90,19 +88,25 @@ impl ModuleEventHandler {
 
             let mut wanted_commands = vec![];
 
-            debug!("getting active modules");
-            get_module!(manager, instance, ModuleManager);
+            let manager = get_module::<ModuleManager>().await;
+            let manager: &ModuleManager = manager.module();
+
             let active_modules = manager.get_all_active_module_ids(guild.id).clone();
             if let Some(manager_command) = manager.command_builder() {
                 wanted_commands.push(manager_command);
             }
-            drop(instance);
 
             debug!("getting wanted commands");
             for active_module in active_modules {
                 debug!("checking: {active_module}");
-                let module = get_module_instance_by_id(&active_module).await?;
-                if let Some(command) = module.command_builder() {
+                let module = get_module_by_id(&active_module).await;
+                if module.is_none() {
+                    warn!("invalid active module: {}", active_module);
+                    continue;
+                }
+                let module = module.unwrap();
+
+                if let Some(command) = module.instance().command_builder() {
                     debug!("wanted command: {:?}", command);
                     wanted_commands.push(command);
                 }

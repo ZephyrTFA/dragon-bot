@@ -1,12 +1,11 @@
-use std::{collections::HashMap, path::PathBuf};
-
 use super::{config::ConfigError, errors::ModuleError};
 use crate::{
-    core::{module::DragonBotModule, modules::get_module_instance_by_id},
+    core::module::{DragonBotModule, get_module_by_id},
     data_path,
 };
 use log::{debug, info, warn};
 use serenity::all::{CacheHttp, Context, GuildId};
+use std::{collections::HashMap, path::PathBuf};
 use tokio::fs::{create_dir_all, read_to_string, write};
 
 mod command;
@@ -105,8 +104,8 @@ impl<'a> ModuleManager {
 
         let mut will_active = vec![];
         for wanted in wanted_active {
-            let instance = get_module_instance_by_id(&wanted).await;
-            if instance.is_ok() {
+            let instance = get_module_by_id(&wanted).await;
+            if instance.is_some() {
                 will_active.push(wanted);
             } else {
                 warn!("Removing wanted active invalid module: {wanted}");
@@ -130,7 +129,10 @@ impl<'a> ModuleManager {
             unreachable!();
         }
 
-        _ = get_module_instance_by_id(module).await?;
+        _ = get_module_by_id(module)
+            .await
+            .ok_or(ModuleManagerError::ModuleNotFound)?;
+
         self.active_modules.entry(guild).or_default();
         self.active_modules
             .get_mut(&guild)
@@ -151,7 +153,10 @@ impl<'a> ModuleManager {
             unreachable!();
         }
 
-        _ = get_module_instance_by_id(module).await?;
+        _ = get_module_by_id(module)
+            .await
+            .ok_or(ModuleManagerError::ModuleNotFound)?;
+
         if !self.is_module_id_active(guild, module) {
             Err(ModuleManagerError::ModuleAlreadyInactive)?;
             unreachable!();

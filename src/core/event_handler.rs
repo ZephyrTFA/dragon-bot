@@ -1,6 +1,6 @@
-use super::module::DragonBotModule;
+use super::module::{DragonBotModule, get_module_by_id};
 use crate::{
-    core::modules::get_module_instance_by_id, get_module, get_module_mut,
+    core::module::{GetModule, get_module},
     module::module_manager::ModuleManager,
 };
 use log::{debug, error, warn};
@@ -10,15 +10,14 @@ use serenity::{
     },
     async_trait,
 };
-use std::ops::Deref;
-use std::ops::DerefMut;
 use std::process::exit;
 
 pub struct ModuleEventHandler;
 
 impl ModuleEventHandler {
     async fn init_modules(&self, ctx: &Context) {
-        get_module_mut!(manager, ModuleManager);
+        let mut manager = get_module::<ModuleManager>().await;
+        let manager: &mut ModuleManager = manager.module_mut();
         if let Err(err) = manager.init(ctx).await {
             error!("failed to initialize module manager: {err:?}");
             exit(1);
@@ -55,7 +54,9 @@ impl EventHandler for ModuleEventHandler {
             }
             let guild = guild.unwrap();
 
-            get_module!(manager, instance, ModuleManager);
+            let manager = get_module::<ModuleManager>().await;
+            let manager: &ModuleManager = manager.module();
+
             let target_module = &command.data.name;
             if !manager.is_module_id_active(guild, target_module) {
                 warn!(
@@ -64,10 +65,9 @@ impl EventHandler for ModuleEventHandler {
                 );
                 return;
             }
-            drop(instance);
 
-            let module = get_module_instance_by_id(&command.data.name).await;
-            if module.is_err() {
+            let module = get_module_by_id(&command.data.name).await;
+            if module.is_none() {
                 warn!(
                     "Attempted to run an unknown interaction: {}",
                     command.data.name
@@ -87,7 +87,8 @@ impl EventHandler for ModuleEventHandler {
                 return;
             }
 
-            let result = module.unwrap().command_handle(&ctx, &command).await;
+            let mut module = module.unwrap();
+            let result = module.instance_mut().command_handle(&ctx, &command).await;
             if let Err(error) = result {
                 if let Err(error) = command
                     .create_followup(

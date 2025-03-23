@@ -1,12 +1,11 @@
-use std::ops::Deref;
-
-use super::ModuleManager;
+use super::{ModuleManager, permission::PERMISSION_MODULE_ACTIVATE};
 use crate::{
     core::{
         commands::DragonModuleCommand,
         event_handler::ModuleEventHandler,
-        module::DragonBotModule,
-        modules::{DragonBotModuleInstance, get_module_instance_by_id},
+        module::{DragonBotModule, get_module_by_id},
+        modules::DragonBotModuleInstance,
+        permissions::assert_permission,
     },
     module::errors::ModuleError,
 };
@@ -78,56 +77,87 @@ impl DragonModuleCommand for ModuleManager {
         let guild = command.guild_id.expect("no guild id");
 
         match subcommand.name.as_str() {
-            "activate" => match &subcommand.value {
-                CommandDataOptionValue::SubCommand(target) => {
-                    let target = target
-                        .first()
-                        .expect("required field not present")
-                        .value
-                        .as_str()
-                        .expect("field malformed");
-                    self.set_module_active(guild, target).await?;
-                    if let Err(err) = command
-                        .create_followup(
-                            ctx.http(),
-                            CreateInteractionResponseFollowup::new()
-                                .content(format!("Module `{target}` activated.")),
+            "activate"
+                if assert_permission(
+                    ctx,
+                    command,
+                    self,
+                    command.member.as_ref().unwrap(),
+                    PERMISSION_MODULE_ACTIVATE,
+                )
+                .await? =>
+            {
+                match &subcommand.value {
+                    CommandDataOptionValue::SubCommand(target) => {
+                        let target = target
+                            .first()
+                            .expect("required field not present")
+                            .value
+                            .as_str()
+                            .expect("field malformed");
+                        self.set_module_active(guild, target).await?;
+                        if let Err(err) = command
+                            .create_followup(
+                                ctx.http(),
+                                CreateInteractionResponseFollowup::new()
+                                    .content(format!("Module `{target}` activated.")),
+                            )
+                            .await
+                        {
+                            warn!("Failed to send interaction response: {err}");
+                        }
+                        let module = get_module_by_id(target).await.unwrap();
+                        ModuleEventHandler::register_guild_module_command(
+                            ctx,
+                            guild,
+                            module.instance(),
                         )
-                        .await
-                    {
-                        warn!("Failed to send interaction response: {err}");
-                    }
-                    let module = get_module_instance_by_id(target).await?;
-                    ModuleEventHandler::register_guild_module_command(ctx, guild, module.deref())
                         .await;
-                }
-                _ => unreachable!(),
-            },
-            "deactivate" => match &subcommand.value {
-                CommandDataOptionValue::SubCommand(target) => {
-                    let target = target
-                        .first()
-                        .expect("required field not present")
-                        .value
-                        .as_str()
-                        .expect("field malformed");
-                    self.set_module_inactive(command.guild_id.unwrap(), target)
-                        .await?;
-                    if let Err(err) = command
-                        .create_followup(
-                            ctx.http(),
-                            CreateInteractionResponseFollowup::new()
-                                .content(format!("Module `{target}` deactivated.")),
-                        )
-                        .await
-                    {
-                        warn!("Failed to send interaction response: {err}");
                     }
-                    let module = get_module_instance_by_id(target).await?;
-                    ModuleEventHandler::drop_guild_module_command(ctx, guild, module.deref()).await;
+                    _ => unreachable!(),
                 }
-                _ => unreachable!(),
-            },
+            }
+            "deactivate"
+                if assert_permission(
+                    ctx,
+                    command,
+                    self,
+                    command.member.as_ref().unwrap(),
+                    PERMISSION_MODULE_ACTIVATE,
+                )
+                .await? =>
+            {
+                match &subcommand.value {
+                    CommandDataOptionValue::SubCommand(target) => {
+                        let target = target
+                            .first()
+                            .expect("required field not present")
+                            .value
+                            .as_str()
+                            .expect("field malformed");
+                        self.set_module_inactive(command.guild_id.unwrap(), target)
+                            .await?;
+                        if let Err(err) = command
+                            .create_followup(
+                                ctx.http(),
+                                CreateInteractionResponseFollowup::new()
+                                    .content(format!("Module `{target}` deactivated.")),
+                            )
+                            .await
+                        {
+                            warn!("Failed to send interaction response: {err}");
+                        }
+                        let module = get_module_by_id(target).await.unwrap();
+                        ModuleEventHandler::drop_guild_module_command(
+                            ctx,
+                            guild,
+                            module.instance(),
+                        )
+                        .await;
+                    }
+                    _ => unreachable!(),
+                }
+            }
             "list-active" => {
                 let mut response = "```diff\n".to_string();
                 for active in self.get_all_active_module_ids(guild) {
