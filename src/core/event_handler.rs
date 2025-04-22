@@ -1,4 +1,6 @@
-use super::module::{DragonBotModule, GetModule, get_module_by_id_mut, get_module_mut};
+use super::module::{
+    DragonBotModule, GetModule, GetModuleError, get_module_by_id_mut, get_module_mut,
+};
 use crate::{core::module::get_module, module::module_manager::ModuleManager};
 use log::{debug, error, info, warn};
 use serenity::{
@@ -7,14 +9,16 @@ use serenity::{
     },
     async_trait,
 };
-use std::process::exit;
+use std::{process::exit, time::Duration};
 
 pub struct ModuleEventHandler;
 
 impl ModuleEventHandler {
     async fn init_modules(&self, ctx: &Context) {
         info!("Initializing modules...");
-        let mut holder = get_module_mut::<ModuleManager>().await;
+        let mut holder = get_module_mut::<ModuleManager>(None)
+            .await
+            .expect("something owns a reference to module manager before init?");
         let manager: &mut ModuleManager = holder.module_mut();
         if let Err(err) = manager.init(ctx).await {
             error!("Failed to initialize modules: {err:?}");
@@ -53,24 +57,56 @@ impl EventHandler for ModuleEventHandler {
             }
             let guild = guild.unwrap();
 
-            let manager = get_module::<ModuleManager>().await;
-            let manager: &ModuleManager = manager.module();
-
-            let target_module = &command.data.name;
-            if !manager.is_module_id_active(guild, target_module) {
-                warn!(
-                    "Attempted to run a command for an inactive module {target_module}: {}",
-                    command.data.name
-                );
+            let module = get_module::<ModuleManager>(Some(Duration::from_secs(5))).await;
+            if let Err(error) = &module {
+                match error {
+                    GetModuleError::GetModuleBlocked => {
+                        warn!("Failed to run a module command: obtaining read lock timed out")
+                    }
+                    GetModuleError::ModuleNotFound => {
+                        warn!(
+                            "Attempted to run a command for an unknown module: {}",
+                            command.data.name
+                        );
+                    }
+                }
                 return;
             }
 
-            let module = get_module_by_id_mut(&command.data.name).await;
-            if module.is_none() {
-                warn!(
-                    "Attempted to run an unknown interaction: {}",
-                    command.data.name
-                );
+            let manager = module.unwrap();
+            let manager: &ModuleManager = manager.module();
+
+            let target_module = &command.data.name;
+            let module_is_active = manager.is_module_id_active(guild, target_module).await;
+            match module_is_active {
+                Ok(false) => {
+                    warn!(
+                        "Attempted to run a command for an inactive module {target_module}: {}",
+                        command.data.name
+                    );
+                    return;
+                }
+                Err(err) => {
+                    warn!("Failed to query module active state {target_module}: {err:?}",);
+                    return;
+                }
+                _ => {}
+            };
+
+            let module =
+                get_module_by_id_mut(&command.data.name, Some(Duration::from_secs(5))).await;
+            if let Err(error) = &module {
+                match error {
+                    GetModuleError::GetModuleBlocked => {
+                        warn!("Failed to run a module command: obtaining write lock timed out")
+                    }
+                    GetModuleError::ModuleNotFound => {
+                        warn!(
+                            "Attempted to run a command for an unknown module: {}",
+                            command.data.name
+                        );
+                    }
+                }
                 return;
             }
 

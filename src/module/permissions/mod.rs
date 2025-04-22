@@ -1,4 +1,4 @@
-use super::{config::Configurable, errors::ModuleError};
+use super::{config::DragonModuleConfigurable, errors::ModuleError};
 use crate::core::{module::DragonBotModule, permissions::ModulePermission};
 use serenity::all::{GenericId, GuildId, Member};
 use std::collections::HashMap;
@@ -33,7 +33,9 @@ impl PermissionsManager {
         namespace: &str,
         permission: &str,
     ) -> Result<bool, ModuleError> {
-        let mut guild_config = self.get_config(member.guild_id).await?;
+        let mut guild_config = self
+            .get_config::<PermissionsManager>(member.guild_id)
+            .await?;
         for id in [member.user.id.get()]
             .into_iter()
             .chain(member.roles.iter().map(|role| role.get()))
@@ -60,7 +62,7 @@ impl PermissionsManager {
         permission: &str,
     ) -> Result<(), ModuleError> {
         let permission = permission.to_string();
-        let mut guild_config = self.get_config(guild).await?;
+        let mut guild_config = self.get_config::<PermissionsManager>(guild).await?;
 
         let namespaces = &mut guild_config.namespaces;
         let namespace = namespaces
@@ -74,7 +76,8 @@ impl PermissionsManager {
         }
         permissions.push(permission);
 
-        self.set_config(guild, guild_config).await
+        self.set_config::<PermissionsManager>(guild, guild_config)
+            .await
     }
 
     async fn take_permission_str(
@@ -85,7 +88,7 @@ impl PermissionsManager {
         permission: &str,
     ) -> Result<(), ModuleError> {
         let permission = permission.to_string();
-        let mut guild_config = self.get_config(guild).await?;
+        let mut guild_config = self.get_config::<PermissionsManager>(guild).await?;
 
         let namespaces = &mut guild_config.namespaces;
         let namespace = namespaces
@@ -99,7 +102,8 @@ impl PermissionsManager {
         }
         permissions.retain(|perm| *perm != permission);
 
-        self.set_config(guild, guild_config).await
+        self.set_config::<PermissionsManager>(guild, guild_config)
+            .await
     }
 
     pub async fn has_permission(

@@ -1,15 +1,15 @@
-use std::collections::HashMap;
-
+use crate::module::config::DragonModuleConfigurable;
 use serde::{Deserialize, Serialize};
 use serenity::all::GenericId;
-
-use crate::module::config::Configurable;
+use std::collections::HashMap;
 
 use super::PermissionsManager;
 
 #[derive(Serialize, Deserialize, Default)]
-pub(super) struct PermissionsManagerConfig {
+pub struct PermissionsManagerConfig {
     pub namespaces: HashMap<String, HashMap<GenericId, Vec<String>>>,
 }
 
-impl Configurable<PermissionsManagerConfig> for PermissionsManager {}
+impl DragonModuleConfigurable for PermissionsManager {
+    type Config = PermissionsManagerConfig;
+}

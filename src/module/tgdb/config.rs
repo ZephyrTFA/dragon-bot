@@ -1,11 +1,10 @@
-use serde::{Deserialize, Serialize};
-
-use crate::module::config::Configurable;
+use crate::module::config::DragonModuleConfigurable;
 
 use super::TgDb;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Default)]
-pub(super) struct TgDbConfig {
+pub struct TgDbConfig {
     pub address: String,
     pub port: u64,
     pub user: String,
@@ -13,4 +12,6 @@ pub(super) struct TgDbConfig {
     pub database: String,
 }
 
-impl Configurable<TgDbConfig> for TgDb {}
+impl DragonModuleConfigurable for TgDb {
+    type Config = TgDbConfig;
+}

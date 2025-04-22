@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use super::PermissionsManager;
 use crate::{
     core::{
@@ -8,7 +10,7 @@ use crate::{
     },
     module::{errors::ModuleError, permissions::permission::EDIT_PERMISSIONS},
 };
-use log::{debug, warn};
+use log::warn;
 use serenity::all::{
     CacheHttp, CommandDataOptionValue, CommandInteraction, CommandOptionType, Context,
     CreateAllowedMentions, CreateCommand, CreateCommandOption, CreateInteractionResponseFollowup,
@@ -19,9 +21,9 @@ impl DragonModuleCommand for PermissionsManager {
         let mut builder = CreateCommand::new(self.id()).description("manage permissions");
 
         for module_id in DragonBotModuleInstance::all_module_ids() {
-            let module = get_module_by_id(module_id)
+            let module = get_module_by_id(module_id, Some(Duration::from_secs(5)))
                 .await
-                .expect("invalid module id");
+                .unwrap();
             let mut module_option =
                 CreateCommandOption::new(CommandOptionType::SubCommandGroup, module_id, module_id);
 

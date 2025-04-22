@@ -2,7 +2,7 @@ mod config;
 
 use super::errors::ModuleError;
 use crate::core::{
-    commands::DragonModuleCommand, module::DragonBotModule, permissions::DragonModulePermissions,
+    commands::DragonModuleCommand, module::DragonBotModule, permissions::DragonModulePermission,
 };
 use mysql::{Pool, PooledConn};
 use serenity::all::GuildId;
@@ -34,7 +34,7 @@ impl DragonBotModule for TgDb {
         "tgdb"
     }
 }
-impl DragonModulePermissions for TgDb {}
+impl DragonModulePermission for TgDb {}
 impl DragonModuleCommand for TgDb {}
 
 #[derive(Debug)]

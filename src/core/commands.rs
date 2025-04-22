@@ -88,24 +88,19 @@ impl ModuleEventHandler {
 
             let mut wanted_commands = vec![];
 
-            let holder = get_module::<ModuleManager>().await;
-            let manager: &ModuleManager = holder.module();
+            let module = get_module::<ModuleManager>(None).await?;
+            let manager: &ModuleManager = module.module();
 
-            let active_modules = manager.get_all_active_module_ids(guild.id).clone();
+            let active_modules = manager.get_all_active_module_ids(guild.id).await?.clone();
             if let Some(manager_command) = manager.command_builder().await {
                 wanted_commands.push(manager_command.clone());
             }
-            drop(holder);
+            drop(module);
 
             debug!("getting wanted commands");
             for active_module in active_modules {
                 debug!("checking: {active_module}");
-                let module = get_module_by_id(&active_module).await;
-                if module.is_none() {
-                    warn!("invalid active module: {}", active_module);
-                    continue;
-                }
-                let module = module.unwrap();
+                let module = get_module_by_id(&active_module, None).await?;
                 if let Some(command) = module.instance().command_builder().await {
                     debug!("wanted command: {:#?}", command);
                     wanted_commands.push(command);

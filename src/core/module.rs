@@ -1,17 +1,17 @@
 use super::{
     commands::DragonModuleCommand, modules::DragonBotModuleInstance,
-    permissions::DragonModulePermissions,
+    permissions::DragonModulePermission,
 };
 use crate::module::errors::ModuleError;
 use log::debug;
 use serenity::all::Context;
-use std::{collections::HashMap, marker::PhantomData, sync::OnceLock};
+use std::{collections::HashMap, sync::OnceLock, time::Duration};
 use strum::IntoEnumIterator;
 use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 pub trait DragonBotModule
 where
-    Self: Default + DragonModulePermissions + DragonModuleCommand,
+    Self: Default + DragonModulePermission + DragonModuleCommand,
 {
     fn module_id() -> &'static str;
     fn id(&self) -> &'static str {
@@ -112,7 +112,6 @@ where
     &'a mut T: From<&'a mut DragonBotModuleInstance>,
 {
     fn module(&'a self) -> &'a T {
-        let _: PhantomData<T>;
         self.instance().into()
     }
 
@@ -139,36 +138,72 @@ impl Drop for DragonBotModuleHolder {
     }
 }
 
-pub async fn get_module<T>() -> DragonBotModuleHolder
+pub async fn get_module<T>(
+    timeout: Option<Duration>,
+) -> Result<DragonBotModuleHolder, GetModuleError>
 where
     T: DragonBotModule,
 {
-    get_module_by_id(T::module_id()).await.unwrap()
+    get_module_by_id(T::module_id(), timeout).await
 }
 
-pub async fn get_module_by_id(module: &str) -> Option<DragonBotModuleHolder> {
+pub async fn get_module_by_id(
+    module: &str,
+    timeout: Option<Duration>,
+) -> Result<DragonBotModuleHolder, GetModuleError> {
     let modules = MODULES.get_or_init(init_modules);
-    let mutex = modules.get(module)?;
-    debug!("creating holder to: {}", module);
-    Some(DragonBotModuleHolder {
-        read: Some(mutex.read().await),
+    let rwlock = modules.get(module).ok_or(GetModuleError::ModuleNotFound)?;
+
+    let read_lock = if let Some(timeout) = timeout {
+        tokio::time::timeout(timeout, rwlock.read()).await.ok()
+    } else {
+        rwlock.try_read().ok()
+    };
+    if read_lock.is_none() {
+        return Err(GetModuleError::GetModuleBlocked);
+    }
+
+    debug!("creating read holder to: {}", module);
+    Ok(DragonBotModuleHolder {
+        read: Some(read_lock.unwrap()),
         write: None,
     })
 }
 
-pub async fn get_module_mut<T>() -> DragonBotModuleHolder
+pub async fn get_module_mut<T>(
+    timeout: Option<Duration>,
+) -> Result<DragonBotModuleHolder, GetModuleError>
 where
     T: DragonBotModule,
 {
-    get_module_by_id_mut(T::module_id()).await.unwrap()
+    get_module_by_id_mut(T::module_id(), timeout).await
 }
 
-pub async fn get_module_by_id_mut(module: &str) -> Option<DragonBotModuleHolder> {
+#[derive(Debug)]
+pub enum GetModuleError {
+    ModuleNotFound,
+    GetModuleBlocked,
+}
+
+pub async fn get_module_by_id_mut(
+    module: &str,
+    timeout: Option<Duration>,
+) -> Result<DragonBotModuleHolder, GetModuleError> {
     let modules = MODULES.get_or_init(init_modules);
-    let mutex = modules.get(module)?;
-    debug!("creating mut holder to: {}", module);
-    Some(DragonBotModuleHolder {
-        write: Some(mutex.write().await),
+    let rwlock = modules.get(module).ok_or(GetModuleError::ModuleNotFound)?;
+
+    let write_lock = if let Some(timeout) = timeout {
+        tokio::time::timeout(timeout, rwlock.write()).await.ok()
+    } else {
+        rwlock.try_write().ok()
+    };
+    if write_lock.is_none() {
+        return Err(GetModuleError::GetModuleBlocked);
+    }
+
+    debug!("creating write holder to: {}", module);
+    Ok(DragonBotModuleHolder {
+        write: Some(write_lock.unwrap()),
         read: None,
     })
 }

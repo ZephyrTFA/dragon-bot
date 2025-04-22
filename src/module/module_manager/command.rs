@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use super::{ModuleManager, permission::PERMISSION_MODULE_ACTIVATE};
 use crate::{
     core::{
@@ -106,7 +108,7 @@ impl DragonModuleCommand for ModuleManager {
                         {
                             warn!("Failed to send interaction response: {err}");
                         }
-                        let module = get_module_by_id(target).await.unwrap();
+                        let module = get_module_by_id(target, Some(Duration::from_secs(5))).await?;
                         ModuleEventHandler::register_guild_module_command(
                             ctx,
                             guild,
@@ -147,7 +149,7 @@ impl DragonModuleCommand for ModuleManager {
                         {
                             warn!("Failed to send interaction response: {err}");
                         }
-                        let module = get_module_by_id(target).await.unwrap();
+                        let module = get_module_by_id(target, Some(Duration::from_secs(5))).await?;
                         ModuleEventHandler::drop_guild_module_command(
                             ctx,
                             guild,
@@ -160,7 +162,7 @@ impl DragonModuleCommand for ModuleManager {
             }
             "list-active" => {
                 let mut response = "```diff\n".to_string();
-                for active in self.get_all_active_module_ids(guild) {
+                for active in self.get_all_active_module_ids(guild).await? {
                     response.push_str(format!("+ {}\n", active).as_str());
                 }
                 response.push_str("```\n");

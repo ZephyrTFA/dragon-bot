@@ -1,5 +1,5 @@
-use crate::core::permissions::DragonModulePermissions;
+use crate::core::permissions::DragonModulePermission;
 
 use super::ErrorManager;
 
-impl DragonModulePermissions for ErrorManager {}
+impl DragonModulePermission for ErrorManager {}

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use super::module::{DragonBotModuleHolder, GetModule};
 use crate::{
     core::module::get_module,
@@ -30,7 +32,7 @@ impl PartialEq for ModulePermission {
     }
 }
 
-pub trait DragonModulePermissions {
+pub trait DragonModulePermission {
     fn all_permissions(&self) -> impl Future<Output = Vec<ModulePermission>> {
         async { vec![] }
     }
@@ -53,7 +55,7 @@ pub async fn assert_permission(
     if let Some(manager) = permissions_manager {
         permissions = manager;
     } else {
-        holder = get_module::<PermissionsManager>().await;
+        holder = get_module::<PermissionsManager>(Some(Duration::from_secs(5))).await?;
         permissions = holder.module();
     }
 

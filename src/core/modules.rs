@@ -1,6 +1,6 @@
 use crate::core::commands::DragonModuleCommand;
 use crate::core::module::DragonBotModule;
-use crate::core::permissions::DragonModulePermissions;
+use crate::core::permissions::DragonModulePermission;
 use crate::core::permissions::ModulePermission;
 use crate::module::errors::ModuleError;
 use crate::module::module_manager::ModuleManager;

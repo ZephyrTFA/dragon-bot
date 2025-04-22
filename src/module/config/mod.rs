@@ -15,17 +15,18 @@ pub enum ConfigError {
 }
 
 #[async_trait]
-pub trait Configurable<C>
-where
-    Self: DragonBotModule + Send,
-    C: Serialize + for<'de> Deserialize<'de> + Default + Send + 'static,
-{
-    async fn get_config(&self, guild: GuildId) -> Result<C, ModuleError> {
+pub trait DragonModuleConfigurable: DragonBotModule {
+    type Config: Serialize + for<'de> Deserialize<'de> + Default + Send;
+
+    async fn get_config<T: DragonBotModule>(
+        &self,
+        guild: GuildId,
+    ) -> Result<Self::Config, ModuleError> {
         let config_path = config_path(&guild)
             .await?
             .join(format!("{}.json", Self::module_id()));
         if !config_path.exists() {
-            return Ok(C::default());
+            return Ok(Self::Config::default());
         }
 
         let json = read_to_string(config_path)
@@ -34,7 +35,11 @@ where
         Ok(serde_json::from_str(&json).map_err(ConfigError::SerdeError)?)
     }
 
-    async fn set_config(&self, guild: GuildId, config: C) -> Result<(), ModuleError> {
+    async fn set_config<T: DragonBotModule>(
+        &self,
+        guild: GuildId,
+        config: Self::Config,
+    ) -> Result<(), ModuleError> {
         let config_path = config_path(&guild)
             .await?
             .join(format!("{}.json", Self::module_id()));
@@ -51,7 +56,7 @@ where
 }
 
 #[derive(Default)]
-pub struct ConfigManager {}
+pub struct ConfigManager;
 
 impl DragonBotModule for ConfigManager {
     fn module_id() -> &'static str

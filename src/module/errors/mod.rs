@@ -2,11 +2,12 @@ use super::{
     commands::CommandError, config::ConfigError, module_manager::ModuleManagerError,
     permissions::PermissionsError, tgdb::TgDbError,
 };
-use crate::core::module::DragonBotModule;
+use crate::core::module::{DragonBotModule, GetModuleError};
 use log::error;
 use std::collections::HashMap;
 
 mod command;
+mod config;
 mod permissions;
 
 macro_rules! module_error_types {
@@ -27,7 +28,7 @@ macro_rules! module_error_types {
         )+
 
         impl ErrorManager {
-            fn get_module_error_string(module: &impl DragonBotModule, error: &ModuleError) -> String {
+            fn get_module_error_string(module: &impl DragonBotModule, error: &ModuleError) -> String where {
                 match error {
                     $(
                         ModuleError::$type(err) => format!("[{}][{}]: {:?}", module.id(), stringify!($type), err),
@@ -43,7 +44,8 @@ module_error_types! {
     ModuleManagerError,
     PermissionsError,
     ConfigError,
-    CommandError
+    CommandError,
+    GetModuleError
 }
 
 #[derive(Default)]
