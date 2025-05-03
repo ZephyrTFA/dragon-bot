@@ -1,6 +1,6 @@
 use super::{event_handler::ModuleEventHandler, modules::DragonBotModuleInstance};
 use crate::{
-    core::module::{GetModule, get_module, get_module_by_id},
+    core::module::{get_module, get_module_by_id},
     module::{errors::ModuleError, module_manager::ModuleManager},
     util::get_all_guilds,
 };
@@ -8,7 +8,7 @@ use log::{debug, info, warn};
 use serenity::all::{Builder, CacheHttp, CommandInteraction, Context, CreateCommand, GuildId};
 
 pub trait DragonModuleCommand {
-    fn command_builder(&self) -> impl Future<Output = Option<CreateCommand>> {
+    fn command_builder(&self, _guild: GuildId) -> impl Future<Output = Option<CreateCommand>> {
         async { None }
     }
 
@@ -35,7 +35,7 @@ impl ModuleEventHandler {
         guild: GuildId,
         module: &DragonBotModuleInstance,
     ) {
-        let builder = module.command_builder().await;
+        let builder = module.command_builder(guild).await;
         if builder.is_none() {
             return;
         }
@@ -88,21 +88,22 @@ impl ModuleEventHandler {
 
             let mut wanted_commands = vec![];
 
-            let module = get_module::<ModuleManager>(None).await?;
+            let module = get_module::<ModuleManager>()?;
             let manager: &ModuleManager = module.module();
 
             let active_modules = manager.get_all_active_module_ids(guild.id).await?.clone();
-            if let Some(manager_command) = manager.command_builder().await {
+            if let Some(manager_command) = manager.command_builder(guild.id).await {
                 wanted_commands.push(manager_command.clone());
             }
-            drop(module);
 
             debug!("getting wanted commands");
             for active_module in active_modules {
-                debug!("checking: {active_module}");
-                let module = get_module_by_id(&active_module, None).await?;
-                if let Some(command) = module.instance().command_builder().await {
-                    debug!("wanted command: {:#?}", command);
+                let module = get_module_by_id(&active_module);
+                if module.is_err() {
+                    warn!("skipping invalid module {active_module}!");
+                    continue;
+                }
+                if let Some(command) = module.unwrap().command_builder(guild.id).await {
                     wanted_commands.push(command);
                 }
             }
@@ -119,7 +120,7 @@ impl ModuleEventHandler {
             }
 
             for command in created_commands {
-                info!("Created: {}|{}", command.name, command.id);
+                info!("Created command: {}|{}", command.name, command.id);
             }
         }
 

@@ -5,13 +5,12 @@ use super::{
 };
 use crate::core::{
     commands::DragonModuleCommand,
-    module::{DragonBotModule, GetModule, get_module},
+    module::{DragonBotModule, get_module},
     permissions::DragonModulePermission,
 };
 use discord_link::ByondDiscordLink;
 use mysql::{params, prelude::Queryable};
 use serenity::all::GuildId;
-use std::time::Duration;
 
 mod config;
 mod discord_link;
@@ -37,10 +36,10 @@ impl TgVerify {
         guild: GuildId,
         ckey: &str,
     ) -> Result<Vec<ByondDiscordLink>, ModuleError> {
-        let config = self.get_config::<TgVerify>(guild).await?;
-        let discord_link_table = &config.discord_links_table;
+        let config = self.get_full_config(guild).await?;
+        let discord_link_table = &config.table_linking;
 
-        let tgdb = get_module::<TgDb>(Some(Duration::from_secs(5))).await?;
+        let tgdb = get_module::<TgDb>()?;
         let tgdb: &TgDb = tgdb.module();
         Ok(tgdb
             .get_conn(guild)?
@@ -59,10 +58,10 @@ impl TgVerify {
         guild: GuildId,
         discord_id: u64,
     ) -> Result<Vec<ByondDiscordLink>, ModuleError> {
-        let config = self.get_config::<TgVerify>(guild).await?;
-        let discord_link_table = &config.discord_links_table;
+        let config = self.get_full_config(guild).await?;
+        let discord_link_table = &config.table_linking;
 
-        let tgdb = get_module::<TgDb>(Some(Duration::from_secs(5))).await?;
+        let tgdb = get_module::<TgDb>()?;
         let tgdb: &TgDb = tgdb.module();
         Ok(tgdb
             .get_conn(guild)?
@@ -81,10 +80,10 @@ impl TgVerify {
         guild: GuildId,
         token: &str,
     ) -> Result<Option<ByondDiscordLink>, ModuleError> {
-        let config = self.get_config::<TgVerify>(guild).await?;
-        let discord_link_table = &config.discord_links_table;
+        let config = self.get_full_config(guild).await?;
+        let discord_link_table = &config.table_linking;
 
-        let tgdb = get_module::<TgDb>(Some(Duration::from_secs(5))).await?;
+        let tgdb = get_module::<TgDb>()?;
         let tgdb: &TgDb = tgdb.module();
         Ok(tgdb
             .get_conn(guild)?
@@ -103,11 +102,11 @@ impl TgVerify {
         guild: GuildId,
         link: &ByondDiscordLink,
     ) -> Result<(), ModuleError> {
-        let config = self.get_config::<TgVerify>(guild).await?;
-        let discord_link_table = &config.discord_links_table;
+        let config = self.get_full_config(guild).await?;
+        let discord_link_table = &config.table_linking;
         let id = &link.id;
 
-        let tgdb = get_module::<TgDb>(Some(Duration::from_secs(5))).await?;
+        let tgdb = get_module::<TgDb>()?;
         let tgdb: &TgDb = tgdb.module();
         let result: Option<ByondDiscordLink> = tgdb
             .get_conn(guild)?

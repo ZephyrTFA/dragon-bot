@@ -1,11 +1,13 @@
 use super::errors::ModuleError;
 use crate::{core::module::DragonBotModule, util::config_path};
+use entry::{ConfigField, ConfigFieldError, ConfigValue};
 use serde::{Deserialize, Serialize};
 use serenity::{all::GuildId, async_trait};
-use std::io;
+use std::{collections::HashMap, io};
 use tokio::fs::read_to_string;
 
 mod command;
+pub mod entry;
 mod permission;
 
 #[derive(Debug)]
@@ -14,17 +16,44 @@ pub enum ConfigError {
     IoError(io::Error),
 }
 
-#[async_trait]
-pub trait DragonModuleConfigurable: DragonBotModule {
-    type Config: Serialize + for<'de> Deserialize<'de> + Default + Send;
+pub trait ModuleConfig: Serialize + for<'de> Deserialize<'de> + Default + Send {
+    fn get_config_fields() -> HashMap<&'static str, ConfigField>;
+    fn get_config_entry(&self, field: &str) -> Result<ConfigValue, ConfigFieldError>;
+    fn set_config_entry(&mut self, field: &str, value: ConfigValue)
+    -> Result<(), ConfigFieldError>;
+}
 
-    async fn get_config<T: DragonBotModule>(
-        &self,
-        guild: GuildId,
-    ) -> Result<Self::Config, ModuleError> {
+#[derive(Serialize, Deserialize, Default)]
+pub struct NoConfig;
+impl ModuleConfig for NoConfig {
+    fn get_config_entry(&self, _field: &str) -> Result<ConfigValue, ConfigFieldError> {
+        Err(ConfigFieldError::FieldNotFound)
+    }
+    fn get_config_fields() -> HashMap<&'static str, ConfigField> {
+        HashMap::new()
+    }
+    fn set_config_entry(
+        &mut self,
+        _field: &str,
+        _value: ConfigValue,
+    ) -> Result<(), ConfigFieldError> {
+        Err(ConfigFieldError::FieldNotFound)
+    }
+}
+
+#[async_trait]
+pub trait DragonModuleConfigurable {
+    type Config: ModuleConfig;
+    type Module: DragonBotModule;
+
+    fn get_config_fields() -> HashMap<&'static str, ConfigField> {
+        Self::Config::get_config_fields()
+    }
+
+    async fn get_full_config(&self, guild: GuildId) -> Result<Self::Config, ModuleError> {
         let config_path = config_path(&guild)
             .await?
-            .join(format!("{}.json", Self::module_id()));
+            .join(format!("{}.json", Self::Module::module_id()));
         if !config_path.exists() {
             return Ok(Self::Config::default());
         }
@@ -35,14 +64,14 @@ pub trait DragonModuleConfigurable: DragonBotModule {
         Ok(serde_json::from_str(&json).map_err(ConfigError::SerdeError)?)
     }
 
-    async fn set_config<T: DragonBotModule>(
+    async fn set_full_config(
         &self,
         guild: GuildId,
         config: Self::Config,
     ) -> Result<(), ModuleError> {
         let config_path = config_path(&guild)
             .await?
-            .join(format!("{}.json", Self::module_id()));
+            .join(format!("{}.json", Self::Module::module_id()));
         let json = serde_json::to_string(&config)
             .map_err(ConfigError::SerdeError)?
             .to_string();
@@ -65,4 +94,9 @@ impl DragonBotModule for ConfigManager {
     {
         "config-manager"
     }
+}
+
+impl DragonModuleConfigurable for ConfigManager {
+    type Config = NoConfig;
+    type Module = ConfigManager;
 }

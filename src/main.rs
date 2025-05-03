@@ -1,5 +1,5 @@
 use chrono::Utc;
-use core::event_handler::ModuleEventHandler;
+use core::{event_handler::ModuleEventHandler, module::init_module_map};
 use fern::colors::{Color, ColoredLevelConfig};
 use log::{LevelFilter, error, info};
 use serenity::{Client, all::GatewayIntents};
@@ -34,6 +34,7 @@ async fn main() {
         .expect("failed to set fern as logger");
 
     data_path().await.expect("failed to init data path");
+    init_module_map();
 
     let token = env::var("DISCORD_TOKEN");
     if token.is_err() {

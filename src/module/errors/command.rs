@@ -1,12 +1,12 @@
 use log::warn;
-use serenity::all::{CommandInteraction, Context, CreateCommand};
+use serenity::all::{CommandInteraction, Context, CreateCommand, GuildId};
 
 use crate::core::commands::DragonModuleCommand;
 
 use super::{ErrorManager, ModuleError};
 
 impl DragonModuleCommand for ErrorManager {
-    async fn command_builder(&self) -> Option<CreateCommand> {
+    async fn command_builder(&self, _guild: GuildId) -> Option<CreateCommand> {
         warn!("todo: ErrorManager::command_builder");
         None
     }

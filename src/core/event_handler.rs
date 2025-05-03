@@ -1,29 +1,33 @@
-use super::module::{
-    DragonBotModule, GetModule, GetModuleError, get_module_by_id_mut, get_module_mut,
+use super::module::get_module_by_id_mut;
+use crate::{
+    core::{module::get_module, modules::DragonBotModuleInstance},
+    module::module_manager::ModuleManager,
 };
-use crate::{core::module::get_module, module::module_manager::ModuleManager};
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use serenity::{
     all::{
         CacheHttp, Context, CreateInteractionResponseFollowup, EventHandler, Interaction, Ready,
     },
     async_trait,
 };
-use std::{process::exit, time::Duration};
 
 pub struct ModuleEventHandler;
 
 impl ModuleEventHandler {
     async fn init_modules(&self, ctx: &Context) {
         info!("Initializing modules...");
-        let mut holder = get_module_mut::<ModuleManager>(None)
-            .await
-            .expect("something owns a reference to module manager before init?");
-        let manager: &mut ModuleManager = holder.module_mut();
-        if let Err(err) = manager.init(ctx).await {
-            error!("Failed to initialize modules: {err:?}");
-            exit(1);
+
+        for module in DragonBotModuleInstance::all_module_ids() {
+            match get_module_by_id_mut(module).map(async |module| module.init(ctx).await) {
+                Err(err) => warn!("failed to init {module}: {err:?}"),
+                Ok(result) => {
+                    if let Err(err) = result.await {
+                        warn!("failed to init {module}: {err:?}");
+                    }
+                }
+            }
         }
+
         info!("Modules initialized.");
     }
 
@@ -57,27 +61,12 @@ impl EventHandler for ModuleEventHandler {
             }
             let guild = guild.unwrap();
 
-            let module = get_module::<ModuleManager>(Some(Duration::from_secs(5))).await;
-            if let Err(error) = &module {
-                match error {
-                    GetModuleError::GetModuleBlocked => {
-                        warn!("Failed to run a module command: obtaining read lock timed out")
-                    }
-                    GetModuleError::ModuleNotFound => {
-                        warn!(
-                            "Attempted to run a command for an unknown module: {}",
-                            command.data.name
-                        );
-                    }
-                }
-                return;
-            }
-
-            let manager = module.unwrap();
-            let manager: &ModuleManager = manager.module();
+            let module =
+                get_module::<ModuleManager>().expect("failed to get module manager for reading");
+            let module: &ModuleManager = module.module();
 
             let target_module = &command.data.name;
-            let module_is_active = manager.is_module_id_active(guild, target_module).await;
+            let module_is_active = module.is_module_id_active(guild, target_module).await;
             match module_is_active {
                 Ok(false) => {
                     warn!(
@@ -93,23 +82,7 @@ impl EventHandler for ModuleEventHandler {
                 _ => {}
             };
 
-            let module =
-                get_module_by_id_mut(&command.data.name, Some(Duration::from_secs(5))).await;
-            if let Err(error) = &module {
-                match error {
-                    GetModuleError::GetModuleBlocked => {
-                        warn!("Failed to run a module command: obtaining write lock timed out")
-                    }
-                    GetModuleError::ModuleNotFound => {
-                        warn!(
-                            "Attempted to run a command for an unknown module: {}",
-                            command.data.name
-                        );
-                    }
-                }
-                return;
-            }
-
+            let module = get_module_by_id_mut(&command.data.name);
             let command = interaction.command().unwrap();
             if let Err(error) = command.defer(ctx.http()).await {
                 warn!("Failed to defer command: {error}");
@@ -122,8 +95,8 @@ impl EventHandler for ModuleEventHandler {
                 return;
             }
 
-            let mut module = module.unwrap();
-            let result = module.instance_mut().command_handle(&ctx, &command).await;
+            let module = module.unwrap();
+            let result = module.command_handle(&ctx, &command).await;
             if let Err(error) = result {
                 if let Err(error) = command
                     .create_followup(

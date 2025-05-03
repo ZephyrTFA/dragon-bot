@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use super::{ModuleManager, permission::PERMISSION_MODULE_ACTIVATE};
 use crate::{
     core::{
@@ -14,11 +12,11 @@ use crate::{
 use log::warn;
 use serenity::all::{
     CacheHttp, CommandDataOptionValue, CommandInteraction, CommandOptionType, Context,
-    CreateCommand, CreateCommandOption, CreateInteractionResponseFollowup,
+    CreateCommand, CreateCommandOption, CreateInteractionResponseFollowup, GuildId,
 };
 
 impl DragonModuleCommand for ModuleManager {
-    async fn command_builder(&self) -> Option<CreateCommand> {
+    async fn command_builder(&self, _guild: GuildId) -> Option<CreateCommand> {
         Some(
             CreateCommand::new(ModuleManager::module_id())
                 .description("module manager")
@@ -85,7 +83,6 @@ impl DragonModuleCommand for ModuleManager {
                     command,
                     command.member.as_ref().unwrap(),
                     PERMISSION_MODULE_ACTIVATE,
-                    None,
                 )
                 .await? =>
             {
@@ -108,13 +105,8 @@ impl DragonModuleCommand for ModuleManager {
                         {
                             warn!("Failed to send interaction response: {err}");
                         }
-                        let module = get_module_by_id(target, Some(Duration::from_secs(5))).await?;
-                        ModuleEventHandler::register_guild_module_command(
-                            ctx,
-                            guild,
-                            module.instance(),
-                        )
-                        .await;
+                        let module = get_module_by_id(target)?;
+                        ModuleEventHandler::register_guild_module_command(ctx, guild, module).await;
                     }
                     _ => unreachable!(),
                 }
@@ -125,7 +117,6 @@ impl DragonModuleCommand for ModuleManager {
                     command,
                     command.member.as_ref().unwrap(),
                     PERMISSION_MODULE_ACTIVATE,
-                    None,
                 )
                 .await? =>
             {
@@ -149,21 +140,21 @@ impl DragonModuleCommand for ModuleManager {
                         {
                             warn!("Failed to send interaction response: {err}");
                         }
-                        let module = get_module_by_id(target, Some(Duration::from_secs(5))).await?;
-                        ModuleEventHandler::drop_guild_module_command(
-                            ctx,
-                            guild,
-                            module.instance(),
-                        )
-                        .await;
+                        let module = get_module_by_id(target)?;
+                        ModuleEventHandler::drop_guild_module_command(ctx, guild, module).await;
                     }
                     _ => unreachable!(),
                 }
             }
             "list-active" => {
                 let mut response = "```diff\n".to_string();
-                for active in self.get_all_active_module_ids(guild).await? {
-                    response.push_str(format!("+ {}\n", active).as_str());
+                let all_active = self.get_all_active_module_ids(guild).await?;
+                if all_active.is_empty() {
+                    response.push_str("- Nothing!");
+                } else {
+                    for active in all_active {
+                        response.push_str(format!("+ {}\n", active).as_str());
+                    }
                 }
                 response.push_str("```\n");
                 if let Err(error) = command

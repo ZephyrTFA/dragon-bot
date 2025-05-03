@@ -1,29 +1,37 @@
-use std::time::Duration;
-
 use super::PermissionsManager;
 use crate::{
     core::{
         commands::DragonModuleCommand,
-        module::{DragonBotModule, get_module_by_id},
-        modules::DragonBotModuleInstance,
+        module::{DragonBotModule, get_module, get_module_by_id},
         permissions::assert_permission,
     },
-    module::{errors::ModuleError, permissions::permission::EDIT_PERMISSIONS},
+    module::{
+        errors::ModuleError, module_manager::ModuleManager,
+        permissions::permission::EDIT_PERMISSIONS,
+    },
 };
 use log::warn;
 use serenity::all::{
     CacheHttp, CommandDataOptionValue, CommandInteraction, CommandOptionType, Context,
     CreateAllowedMentions, CreateCommand, CreateCommandOption, CreateInteractionResponseFollowup,
+    GuildId,
 };
 
 impl DragonModuleCommand for PermissionsManager {
-    async fn command_builder(&self) -> Option<CreateCommand> {
+    async fn command_builder(&self, guild: GuildId) -> Option<CreateCommand> {
         let mut builder = CreateCommand::new(self.id()).description("manage permissions");
 
-        for module_id in DragonBotModuleInstance::all_module_ids() {
-            let module = get_module_by_id(module_id, Some(Duration::from_secs(5)))
-                .await
-                .unwrap();
+        let module_manager =
+            get_module::<ModuleManager>().expect("failed to get module manager for reading");
+        let active = module_manager
+            .module::<ModuleManager>()
+            .get_all_active_module_ids(guild)
+            .await
+            .expect("failed to get active modules")
+            .clone();
+
+        for module_id in &active {
+            let module = get_module_by_id(module_id).unwrap();
             let mut module_option =
                 CreateCommandOption::new(CommandOptionType::SubCommandGroup, module_id, module_id);
 
@@ -41,7 +49,7 @@ impl DragonModuleCommand for PermissionsManager {
             let mut permission_option =
                 CreateCommandOption::new(CommandOptionType::String, "permission", "the permission")
                     .required(true);
-            for permission in module.instance().all_permissions().await {
+            for permission in module.all_permissions().await {
                 permission_option =
                     permission_option.add_string_choice(permission.id(), permission.id());
             }
@@ -96,14 +104,7 @@ impl DragonModuleCommand for PermissionsManager {
                 let guild = member.guild_id;
                 match operation.name.as_str() {
                     "grant"
-                        if assert_permission(
-                            ctx,
-                            command,
-                            member,
-                            EDIT_PERMISSIONS,
-                            Some(self),
-                        )
-                        .await? =>
+                        if assert_permission(ctx, command, member, EDIT_PERMISSIONS).await? =>
                     {
                         self.give_permission_str(guild, *target, &module.name, permission)
                             .await?;
@@ -123,14 +124,7 @@ impl DragonModuleCommand for PermissionsManager {
                         }
                     }
                     "revoke"
-                        if assert_permission(
-                            ctx,
-                            command,
-                            member,
-                            EDIT_PERMISSIONS,
-                            Some(self),
-                        )
-                        .await? =>
+                        if assert_permission(ctx, command, member, EDIT_PERMISSIONS).await? =>
                     {
                         self.take_permission_str(guild, *target, &module.name, permission)
                             .await?;

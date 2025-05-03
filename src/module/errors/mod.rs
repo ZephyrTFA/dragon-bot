@@ -1,13 +1,16 @@
 use super::{
-    commands::CommandError, config::ConfigError, module_manager::ModuleManagerError,
-    permissions::PermissionsError, tgdb::TgDbError,
+    super::core::module::GetModuleError,
+    commands::CommandError,
+    config::{ConfigError, DragonModuleConfigurable, NoConfig},
+    module_manager::ModuleManagerError,
+    permissions::PermissionsError,
+    tgdb::TgDbError,
 };
-use crate::core::module::{DragonBotModule, GetModuleError};
+use crate::core::module::DragonBotModule;
 use log::error;
 use std::collections::HashMap;
 
 mod command;
-mod config;
 mod permissions;
 
 macro_rules! module_error_types {
@@ -61,6 +64,11 @@ impl DragonBotModule for ErrorManager {
     {
         "error-manager"
     }
+}
+
+impl DragonModuleConfigurable for ErrorManager {
+    type Config = NoConfig;
+    type Module = ErrorManager;
 }
 
 impl ErrorManager {

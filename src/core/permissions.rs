@@ -1,6 +1,3 @@
-use std::time::Duration;
-
-use super::module::{DragonBotModuleHolder, GetModule};
 use crate::{
     core::module::get_module,
     module::{errors::ModuleError, permissions::PermissionsManager},
@@ -43,23 +40,17 @@ pub async fn assert_permission(
     command: &CommandInteraction,
     member: &Member,
     permission: ModulePermission,
-    permissions_manager: Option<&PermissionsManager>,
 ) -> Result<bool, ModuleError> {
     if member.permissions.is_some_and(|perm| perm.administrator()) {
         return Ok(true);
     }
 
-    let permissions: &PermissionsManager;
-    let holder: DragonBotModuleHolder;
-
-    if let Some(manager) = permissions_manager {
-        permissions = manager;
-    } else {
-        holder = get_module::<PermissionsManager>(Some(Duration::from_secs(5))).await?;
-        permissions = holder.module();
-    }
-
-    if !permissions.has_permission(member, permission).await? {
+    let permissions = get_module::<PermissionsManager>()?;
+    if !permissions
+        .module::<PermissionsManager>()
+        .has_permission(member, permission)
+        .await?
+    {
         if let Err(error) = command
             .create_followup(
                 ctx.http(),
