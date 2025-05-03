@@ -4,7 +4,7 @@ use serenity::all::{GenericId, GuildId, Member};
 use std::collections::HashMap;
 
 mod command;
-mod config;
+pub mod config;
 mod permission;
 
 #[derive(Default)]
@@ -33,7 +33,7 @@ impl PermissionsManager {
         namespace: &str,
         permission: &str,
     ) -> Result<bool, ModuleError> {
-        let mut guild_config = self.get_full_config(member.guild_id).await?;
+        let mut guild_config = Self::get_full_config(member.guild_id).await?;
         for id in [member.user.id.get()]
             .into_iter()
             .chain(member.roles.iter().map(|role| role.get()))
@@ -60,7 +60,7 @@ impl PermissionsManager {
         permission: &str,
     ) -> Result<(), ModuleError> {
         let permission = permission.to_string();
-        let mut guild_config = self.get_full_config(guild).await?;
+        let mut guild_config = Self::get_full_config(guild).await?;
 
         let namespaces = &mut guild_config.namespaces;
         let namespace = namespaces
@@ -73,7 +73,7 @@ impl PermissionsManager {
             unreachable!()
         }
         permissions.push(permission);
-        self.set_full_config(guild, guild_config).await
+        Self::set_full_config(guild, guild_config).await
     }
 
     async fn take_permission_str(
@@ -84,7 +84,7 @@ impl PermissionsManager {
         permission: &str,
     ) -> Result<(), ModuleError> {
         let permission = permission.to_string();
-        let mut guild_config = self.get_full_config(guild).await?;
+        let mut guild_config = Self::get_full_config(guild).await?;
 
         let namespaces = &mut guild_config.namespaces;
         let namespace = namespaces
@@ -97,7 +97,7 @@ impl PermissionsManager {
             unreachable!()
         }
         permissions.retain(|perm| *perm != permission);
-        self.set_full_config(guild, guild_config).await
+        Self::set_full_config(guild, guild_config).await
     }
 
     pub async fn has_permission(

@@ -12,7 +12,7 @@ use discord_link::ByondDiscordLink;
 use mysql::{params, prelude::Queryable};
 use serenity::all::GuildId;
 
-mod config;
+pub mod config;
 mod discord_link;
 
 #[derive(Default)]
@@ -36,7 +36,7 @@ impl TgVerify {
         guild: GuildId,
         ckey: &str,
     ) -> Result<Vec<ByondDiscordLink>, ModuleError> {
-        let config = self.get_full_config(guild).await?;
+        let config = Self::get_full_config(guild).await?;
         let discord_link_table = &config.table_linking;
 
         let tgdb = get_module::<TgDb>()?;
@@ -58,7 +58,7 @@ impl TgVerify {
         guild: GuildId,
         discord_id: u64,
     ) -> Result<Vec<ByondDiscordLink>, ModuleError> {
-        let config = self.get_full_config(guild).await?;
+        let config = Self::get_full_config(guild).await?;
         let discord_link_table = &config.table_linking;
 
         let tgdb = get_module::<TgDb>()?;
@@ -80,7 +80,7 @@ impl TgVerify {
         guild: GuildId,
         token: &str,
     ) -> Result<Option<ByondDiscordLink>, ModuleError> {
-        let config = self.get_full_config(guild).await?;
+        let config = Self::get_full_config(guild).await?;
         let discord_link_table = &config.table_linking;
 
         let tgdb = get_module::<TgDb>()?;
@@ -102,7 +102,7 @@ impl TgVerify {
         guild: GuildId,
         link: &ByondDiscordLink,
     ) -> Result<(), ModuleError> {
-        let config = self.get_full_config(guild).await?;
+        let config = Self::get_full_config(guild).await?;
         let discord_link_table = &config.table_linking;
         let id = &link.id;
 

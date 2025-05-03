@@ -4,7 +4,7 @@ use log::info;
 use serenity::all::GuildId;
 
 mod command;
-mod config;
+pub mod config;
 mod permission;
 
 #[derive(Debug)]
@@ -34,7 +34,7 @@ impl<'a> ModuleManager {
         &self,
         guild: GuildId,
     ) -> Result<Vec<String>, ModuleError> {
-        let config = self.get_full_config(guild).await?;
+        let config = Self::get_full_config(guild).await?;
         Ok(config.active.clone())
     }
 
@@ -77,9 +77,9 @@ impl<'a> ModuleManager {
             unreachable!();
         }
 
-        let mut config = self.get_full_config(guild).await?;
+        let mut config = Self::get_full_config(guild).await?;
         config.active.push(module.to_string());
-        self.set_full_config(guild, config).await?;
+        Self::set_full_config(guild, config).await?;
 
         Ok(())
     }
@@ -104,9 +104,9 @@ impl<'a> ModuleManager {
             unreachable!();
         }
 
-        let mut config = self.get_full_config(guild).await?;
+        let mut config = Self::get_full_config(guild).await?;
         config.active.retain(|m| m != module);
-        self.set_full_config(guild, config).await?;
+        Self::set_full_config(guild, config).await?;
 
         Ok(())
     }

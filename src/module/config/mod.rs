@@ -50,7 +50,7 @@ pub trait DragonModuleConfigurable {
         Self::Config::get_config_fields()
     }
 
-    async fn get_full_config(&self, guild: GuildId) -> Result<Self::Config, ModuleError> {
+    async fn get_full_config(guild: GuildId) -> Result<Self::Config, ModuleError> {
         let config_path = config_path(&guild)
             .await?
             .join(format!("{}.json", Self::Module::module_id()));
@@ -64,11 +64,7 @@ pub trait DragonModuleConfigurable {
         Ok(serde_json::from_str(&json).map_err(ConfigError::SerdeError)?)
     }
 
-    async fn set_full_config(
-        &self,
-        guild: GuildId,
-        config: Self::Config,
-    ) -> Result<(), ModuleError> {
+    async fn set_full_config(guild: GuildId, config: Self::Config) -> Result<(), ModuleError> {
         let config_path = config_path(&guild)
             .await?
             .join(format!("{}.json", Self::Module::module_id()));

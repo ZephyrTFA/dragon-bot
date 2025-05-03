@@ -1,4 +1,4 @@
-mod config;
+pub mod config;
 
 use super::errors::ModuleError;
 use crate::core::{

@@ -31,7 +31,7 @@ where
 }
 
 macro_rules! impl_from {
-    ( $( $type: ident ),+ ) => {
+    ( $( $type: ident )+ ) => {
         $(
             impl<'a> From<&'a mut DragonBotModuleInstance> for &'a mut $type {
                 fn from(value: &'a mut DragonBotModuleInstance) -> Self {
@@ -51,6 +51,30 @@ macro_rules! impl_from {
                 }
             }
         )+
+
+        impl ModuleConfigHolder {
+            pub async fn get_config_entry(&self, field: &str) -> Result<ConfigValue, ConfigFieldError> {
+                match self {
+                    $(
+                        ModuleConfigHolder::$type(config) => config.get_config_entry(field),
+                    )+
+                }
+            }
+            pub async fn set_config_entry(&mut self, field: &str, value: ConfigValue) -> Result<(), ConfigFieldError> {
+                match self {
+                    $(
+                        ModuleConfigHolder::$type(config) => config.set_config_entry(field, value),
+                    )+
+                }
+            }
+            pub async fn save(self, guild: GuildId) -> Result<(), ModuleError> {
+                match self {
+                    $(
+                        ModuleConfigHolder::$type(config) => $type::set_full_config(guild, config).await,
+                    )+
+                }
+            }
+        }
 
         impl DragonBotModuleInstance {
             pub async fn init(&mut self, ctx: &Context) -> Result<(), ModuleError>{
@@ -93,6 +117,14 @@ macro_rules! impl_from {
                 match self {
                     $(
                         DragonBotModuleInstance::$type(_) => $type::get_config_fields(),
+                    )+
+                }
+            }
+
+            pub async fn get_config(&self, guild: GuildId) -> Result<ModuleConfigHolder, ModuleError> {
+                match self {
+                    $(
+                        DragonBotModuleInstance::$type(_) => Ok(ModuleConfigHolder::$type($type::get_full_config(guild).await?)),
                     )+
                 }
             }

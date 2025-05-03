@@ -22,14 +22,14 @@ impl ModuleConfig for TgVerifyConfig {
             (
                 "role_verified_linked",
                 ConfigField::new(
-                    ConfigEntryType::U64,
+                    ConfigEntryType::Role,
                     "role to give users for linking their BYOND account",
                 ),
             ),
             (
                 "role_verified_living",
                 ConfigField::new(
-                    ConfigEntryType::U64,
+                    ConfigEntryType::Role,
                     "role to give users who meet the minimum playtime threshold",
                 ),
             ),

@@ -3,9 +3,17 @@ use crate::core::module::DragonBotModule;
 use crate::core::permissions::DragonModulePermission;
 use crate::core::permissions::ModulePermission;
 use crate::module::config::DragonModuleConfigurable;
+use crate::module::config::ModuleConfig;
+use crate::module::config::NoConfig;
 use crate::module::config::entry::ConfigField;
+use crate::module::config::entry::ConfigFieldError;
+use crate::module::config::entry::ConfigValue;
 use crate::module::errors::ModuleError;
 use crate::module::module_manager::ModuleManager;
+use crate::module::module_manager::config::ModuleManagerConfig;
+use crate::module::permissions::config::PermissionsManagerConfig;
+use crate::module::tg_verify::config::TgVerifyConfig;
+use crate::module::tgdb::config::TgDbConfig;
 use crate::module::{
     config::ConfigManager, errors::ErrorManager, permissions::PermissionsManager,
     tg_verify::TgVerify, tgdb::TgDb,
@@ -24,11 +32,20 @@ pub enum DragonBotModuleInstance {
     ModuleManager(ModuleManager),
 }
 
+pub enum ModuleConfigHolder {
+    TgDb(TgDbConfig),
+    TgVerify(TgVerifyConfig),
+    ConfigManager(NoConfig),
+    PermissionsManager(PermissionsManagerConfig),
+    ErrorManager(NoConfig),
+    ModuleManager(ModuleManagerConfig),
+}
+
 impl_from!(
-    TgDb,
-    TgVerify,
-    ConfigManager,
-    PermissionsManager,
-    ErrorManager,
+    TgDb
+    TgVerify
+    ConfigManager
+    PermissionsManager
+    ErrorManager
     ModuleManager
 );
